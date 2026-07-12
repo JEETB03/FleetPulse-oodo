@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { 
   Plus, 
   AlertTriangle, 
@@ -52,15 +53,9 @@ export const FuelExpense: React.FC = () => {
   const [odometerKm, setOdometerKm] = useState(0);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState('');
-
-  // Current logged in user for permission checks
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { canWriteFuel } = useCurrentUser();
 
   useEffect(() => {
-    const userStr = localStorage.getItem('fleetpulse_user');
-    if (userStr) {
-      setCurrentUser(JSON.parse(userStr));
-    }
     fetchData();
   }, []);
 
@@ -114,13 +109,6 @@ export const FuelExpense: React.FC = () => {
     setShowLogModal(true);
   };
 
-  // Check write access (Admin, Fleet Manager, Finance Analyst)
-  const hasWriteAccess = currentUser && (
-    currentUser.role === 'Admin' || 
-    currentUser.role === 'Fleet Manager' || 
-    currentUser.role === 'Finance Analyst'
-  );
-
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -130,7 +118,7 @@ export const FuelExpense: React.FC = () => {
           <p className="text-xs text-neutral-400 mt-1">Operational expense records and statistical leakage auditing.</p>
         </div>
         <div>
-          {hasWriteAccess ? (
+          {canWriteFuel ? (
             <button 
               onClick={handleOpenLogModal}
               className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-xs px-4 py-2.5 rounded-lg transition font-semibold shadow-lg shadow-brand-500/10"

@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 
 from backend.database import get_session
 from backend.models import (
-    User, Role, Vehicle, VehicleStatus, Driver, Trip, TripStatus,
+    PermissionMatrix, PermissionLevel, User, Role, Vehicle, VehicleStatus, Driver, Trip, TripStatus,
     ServiceLogEntry, FuelLogEntry
 )
 from backend.auth import (
@@ -98,6 +98,24 @@ class ServiceLogCreate(BaseModel):
     cost: float
     odometer_km: float
 
+class PermissionMatrixItem(BaseModel):
+    module: str
+    admin: PermissionLevel
+    manager: PermissionLevel
+    dispatcher: PermissionLevel
+    safety: PermissionLevel
+    finance: PermissionLevel
+    driver: PermissionLevel
+
+class PermissionMatrixPayload(BaseModel):
+    permissions: List[PermissionMatrixItem]
+
+class UserListItem(BaseModel):
+    id: str
+    name: str
+    email: EmailStr
+    role: Role
+
 # ---------------------------------------------------------------------------
 # Authentication Routes
 # ---------------------------------------------------------------------------
@@ -161,6 +179,58 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), ses
         "token_type": "bearer",
         "user": {"id": user.id, "name": user.name, "email": user.email, "role": user.role}
     }
+
+@router.get("/users", response_model=List[UserListItem])
+def list_users(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    if current_user.role != Role.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin credentials required")
+
+    users = session.exec(select(User).order_by(User.created_at.asc())).all()
+    return users
+
+@router.get("/settings/permissions", response_model=List[PermissionMatrix])
+def list_permissions(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    permissions = session.exec(select(PermissionMatrix).order_by(PermissionMatrix.module.asc())).all()
+    return permissions
+
+@router.put("/settings/permissions", response_model=List[PermissionMatrix])
+def update_permissions(
+    payload: PermissionMatrixPayload,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    if current_user.role != Role.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin credentials required")
+
+    updated_rows: list[PermissionMatrix] = []
+    for item in payload.permissions:
+        row = session.get(PermissionMatrix, item.module)
+        if row is None:
+            row = PermissionMatrix(module=item.module)
+
+        row.admin = item.admin
+        row.manager = item.manager
+        row.dispatcher = item.dispatcher
+        row.safety = item.safety
+        row.finance = item.finance
+        row.driver = item.driver
+        row.updated_at = datetime.utcnow()
+
+        session.add(row)
+        updated_rows.append(row)
+
+    session.commit()
+
+    for row in updated_rows:
+        session.refresh(row)
+
+    return updated_rows
 
 # ---------------------------------------------------------------------------
 # Vehicle Routes

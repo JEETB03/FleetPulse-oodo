@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { 
   Plus, 
   Search, 
@@ -45,15 +46,9 @@ export const Vehicles: React.FC = () => {
   const [insuranceExpiry, setInsuranceExpiry] = useState(new Date().toISOString().split('T')[0]);
   const [engineHours, setEngineHours] = useState(0);
   const [addError, setAddError] = useState('');
-
-  // User RBAC permission checker
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { canWriteVehicles } = useCurrentUser();
 
   useEffect(() => {
-    const userStr = localStorage.getItem('fleetpulse_user');
-    if (userStr) {
-      setCurrentUser(JSON.parse(userStr));
-    }
     fetchVehicles();
   }, []);
 
@@ -112,9 +107,6 @@ export const Vehicles: React.FC = () => {
     }
   };
 
-  // Check write access (Admin or Fleet Manager)
-  const hasWriteAccess = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Fleet Manager');
-
   // Filter vehicles
   const filteredVehicles = vehicles.filter(v => {
     const matchesSearch = v.plate_no.toLowerCase().includes(search.toLowerCase()) || v.v_type.toLowerCase().includes(search.toLowerCase());
@@ -132,7 +124,7 @@ export const Vehicles: React.FC = () => {
           <p className="text-xs text-neutral-400 mt-1">Registry of all corporate buses, vans, and cargo trucks.</p>
         </div>
         <div>
-          {hasWriteAccess ? (
+          {canWriteVehicles ? (
             <button 
               onClick={() => setShowAddModal(true)}
               className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-xs px-4 py-2.5 rounded-lg transition font-semibold shadow-lg shadow-brand-500/10"

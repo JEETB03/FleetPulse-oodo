@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { api } from '../api';
 import { 
   ShieldAlert, 
   Grid, 
   Users, 
-  UserCheck
+  UserCheck,
+  Save,
+  RefreshCw
 } from 'lucide-react';
+
+type PermissionLevel = 'Read' | 'Write' | 'No Access';
 
 interface SeedUser {
   id: string;
@@ -13,8 +18,45 @@ interface SeedUser {
   role: string;
 }
 
+interface PermissionRow {
+  module: string;
+  admin: PermissionLevel;
+  manager: PermissionLevel;
+  dispatcher: PermissionLevel;
+  safety: PermissionLevel;
+  finance: PermissionLevel;
+  driver: PermissionLevel;
+}
+
+const MODULE_LABELS: Record<string, string> = {
+  vehicles: 'Vehicles',
+  drivers: 'Drivers',
+  dispatch: 'Dispatch',
+  maintenance: 'Maintenance',
+  fuel_expense: 'Fuel & Expense',
+  reports: 'Reports',
+  settings: 'Settings',
+};
+
+const MODULE_ORDER = ['vehicles', 'drivers', 'dispatch', 'maintenance', 'fuel_expense', 'reports', 'settings'];
+
+const ROLE_COLUMNS: Array<{ key: keyof Omit<PermissionRow, 'module'>; label: string }> = [
+  { key: 'admin', label: 'Admin' },
+  { key: 'manager', label: 'Fleet Manager' },
+  { key: 'dispatcher', label: 'Dispatcher' },
+  { key: 'safety', label: 'Safety Officer' },
+  { key: 'finance', label: 'Finance Analyst' },
+  { key: 'driver', label: 'Driver' },
+];
+
+const PERMISSION_OPTIONS: PermissionLevel[] = ['Read', 'Write', 'No Access'];
+
 export const Settings: React.FC = () => {
   const [users, setUsers] = useState<SeedUser[]>([]);
+  const [permissionsGrid, setPermissionsGrid] = useState<PermissionRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   
   // Current logged in user for permission checks
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -24,19 +66,53 @@ export const Settings: React.FC = () => {
     if (userStr) {
       setCurrentUser(JSON.parse(userStr));
     }
-    fetchUsers();
+    fetchSettingsData();
   }, []);
 
-  const fetchUsers = async () => {
-    const seedMockUsers: SeedUser[] = [
-        { id: 'usr-admin', name: 'Alex Carter', email: 'admin@fleetpulse.com', role: 'Admin' },
-        { id: 'usr-fm', name: 'Sarah Jenkins', email: 'manager@fleetpulse.com', role: 'Fleet Manager' },
-        { id: 'usr-disp', name: 'Mike O\'Connor', email: 'dispatcher@fleetpulse.com', role: 'Dispatcher' },
-        { id: 'usr-safety', name: 'Jessica Vance', email: 'safety@fleetpulse.com', role: 'Safety Officer' },
-        { id: 'usr-finance', name: 'David Kim', email: 'finance@fleetpulse.com', role: 'Finance Analyst' },
-        { id: 'usr-driver', name: 'Robert Taylor', email: 'driver@fleetpulse.com', role: 'Driver' },
-      ];
-      setUsers(seedMockUsers);
+  const fetchSettingsData = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const [userList, permissionList] = await Promise.all([
+        api.get<SeedUser[]>('/users'),
+        api.get<PermissionRow[]>('/settings/permissions'),
+      ]);
+
+      setUsers(userList);
+      setPermissionsGrid(permissionList.sort((a, b) => MODULE_ORDER.indexOf(a.module) - MODULE_ORDER.indexOf(b.module)));
+    } catch (err: any) {
+      setError(err.message || 'Failed to load settings data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePermissionChange = (module: string, column: keyof Omit<PermissionRow, 'module'>, value: PermissionLevel) => {
+    setPermissionsGrid((previous) =>
+      previous.map((row) => (row.module === module ? { ...row, [column]: value } : row))
+    );
+  };
+
+  const savePermissions = async () => {
+    try {
+      setSaving(true);
+      setError('');
+      const payload = permissionsGrid.map(({ module, admin, manager, dispatcher, safety, finance, driver }) => ({
+        module,
+        admin,
+        manager,
+        dispatcher,
+        safety,
+        finance,
+        driver,
+      }));
+      const updated = await api.put<PermissionRow[]>('/settings/permissions', { permissions: payload });
+      setPermissionsGrid(updated.sort((a, b) => MODULE_ORDER.indexOf(a.module) - MODULE_ORDER.indexOf(b.module)));
+    } catch (err: any) {
+      setError(err.message || 'Failed to save permission changes');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Check write access (Admin only)
@@ -57,16 +133,6 @@ export const Settings: React.FC = () => {
   }
 
   // RBAC grid data matching wireframe specifications
-  const permissionsGrid = [
-    { module: 'Vehicles', admin: 'Write', manager: 'Write', dispatcher: 'Read', safety: 'Read', finance: 'Read', driver: 'Read' },
-    { module: 'Drivers', admin: 'Write', manager: 'Write', dispatcher: 'Read', safety: 'Write', finance: 'Read', driver: 'Read' },
-    { module: 'Dispatch', admin: 'Write', manager: 'Write', dispatcher: 'Write', safety: 'Read', finance: 'Read', driver: 'Read' },
-    { module: 'Maintenance', admin: 'Write', manager: 'Write', dispatcher: 'Read', safety: 'Read', finance: 'Read', driver: 'Read' },
-    { module: 'Fuel & Expense', admin: 'Write', manager: 'Write', dispatcher: 'Read', safety: 'Read', finance: 'Write', driver: 'Read' },
-    { module: 'Reports', admin: 'Read', manager: 'Read', dispatcher: 'No Access', safety: 'Read', finance: 'Read', driver: 'No Access' },
-    { module: 'Settings', admin: 'Write', manager: 'No Access', dispatcher: 'No Access', safety: 'No Access', finance: 'No Access', driver: 'No Access' },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -84,6 +150,29 @@ export const Settings: React.FC = () => {
           Global access control mapping for write/read clearances across application modules.
         </p>
 
+        <div className="flex items-center gap-2 justify-end">
+          <button
+            onClick={fetchSettingsData}
+            disabled={loading || saving}
+            className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 text-xs px-3 py-2 rounded-lg text-neutral-300 hover:text-neutral-100 hover:bg-neutral-800 transition disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Reload
+          </button>
+          <button
+            onClick={savePermissions}
+            disabled={saving || loading}
+            className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-xs px-3 py-2 rounded-lg transition font-semibold shadow-lg shadow-brand-500/10 disabled:opacity-50"
+          >
+            <Save className={`w-3.5 h-3.5 ${saving ? 'animate-pulse' : ''}`} />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+
+        {error && (
+          <div className="text-xs bg-red-950/60 border border-red-800 text-red-200 p-3 rounded-lg">{error}</div>
+        )}
+
         <div className="overflow-x-auto border border-neutral-800/80 rounded-lg">
           <table className="w-full text-xs text-left">
             <thead>
@@ -98,46 +187,28 @@ export const Settings: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-900">
-              {permissionsGrid.map((row) => (
+              {loading ? (
+                <tr>
+                  <td className="p-4 text-neutral-500" colSpan={7}>Loading permission matrix...</td>
+                </tr>
+              ) : permissionsGrid.map((row) => (
                 <tr key={row.module} className="hover:bg-neutral-900/20 transition">
-                  <td className="p-3 font-semibold text-neutral-300">{row.module}</td>
-                  
-                  {/* Admin cell */}
-                  <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.admin === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : 'bg-neutral-800'}`}>
-                      {row.admin}
-                    </span>
-                  </td>
-                  {/* Fleet manager cell */}
-                  <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.manager === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : row.manager === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40 border border-red-900/30'}`}>
-                      {row.manager}
-                    </span>
-                  </td>
-                  {/* Dispatcher cell */}
-                  <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.dispatcher === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : row.dispatcher === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40 border border-red-900/30'}`}>
-                      {row.dispatcher}
-                    </span>
-                  </td>
-                  {/* Safety cell */}
-                  <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.safety === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : row.safety === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40 border border-red-900/30'}`}>
-                      {row.safety}
-                    </span>
-                  </td>
-                  {/* Finance cell */}
-                  <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.finance === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : row.finance === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40 border border-red-900/30'}`}>
-                      {row.finance}
-                    </span>
-                  </td>
-                  {/* Driver cell */}
-                  <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.driver === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : row.driver === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40 border border-red-900/30'}`}>
-                      {row.driver}
-                    </span>
-                  </td>
+                  <td className="p-3 font-semibold text-neutral-300">{MODULE_LABELS[row.module] || row.module}</td>
+
+                  {ROLE_COLUMNS.map(({ key }) => (
+                    <td key={`${row.module}-${String(key)}`} className="p-3 text-center">
+                      <select
+                        value={row[key]}
+                        onChange={(e) => handlePermissionChange(row.module, key, e.target.value as PermissionLevel)}
+                        disabled={saving}
+                        className={`px-2 py-1 rounded text-[9px] font-semibold text-white bg-neutral-900 border border-neutral-800 focus:outline-none focus:border-brand-500 ${row[key] === 'Write' ? 'bg-emerald-950/60' : row[key] === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40'}`}
+                      >
+                        {PERMISSION_OPTIONS.map((option) => (
+                          <option key={option} value={option} className="bg-neutral-900 text-white">{option}</option>
+                        ))}
+                      </select>
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -162,7 +233,15 @@ export const Settings: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-900">
-              {users.map((u) => (
+              {loading ? (
+                <tr>
+                  <td className="p-4 text-neutral-500" colSpan={4}>Loading user directory...</td>
+                </tr>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td className="p-4 text-neutral-500" colSpan={4}>No users available.</td>
+                </tr>
+              ) : users.map((u) => (
                 <tr key={u.id} className="hover:bg-neutral-900/20 transition">
                   <td className="p-3 font-mono text-[10px] text-brand-400 font-bold">{u.id}</td>
                   <td className="p-3 font-medium text-neutral-200">{u.name}</td>

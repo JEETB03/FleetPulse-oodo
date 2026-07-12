@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 from sqlmodel import Session, select
 
 from backend.database import get_session
-from backend.models import User, Role
+from backend.models import User, Role, PermissionMatrix, PermissionLevel
 
 # Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "fleetpulse-super-secret-key-change-in-prod-12345")
@@ -16,6 +16,15 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480 # 8 hours for demo/hackathon ease
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+
+ROLE_TO_COLUMN = {
+    Role.ADMIN: "admin",
+    Role.FLEET_MANAGER: "manager",
+    Role.DISPATCHER: "dispatcher",
+    Role.SAFETY_OFFICER: "safety",
+    Role.FINANCE_ANALYST: "finance",
+    Role.DRIVER: "driver",
+}
 
 # Module permissions mapping (Allowed write roles)
 WRITE_PERMISSIONS = {
@@ -52,6 +61,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+def get_permission_level(session: Session, module: str, role: Role) -> PermissionLevel:
+    row = session.get(PermissionMatrix, module)
+    if row is None:
+        return PermissionLevel.NO_ACCESS
+
+    column_name = ROLE_TO_COLUMN.get(role)
+    if not column_name:
+        return PermissionLevel.NO_ACCESS
+
+    return getattr(row, column_name)
+
 def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -76,22 +96,26 @@ class PermissionChecker:
         self.module = module
         self.requires_write = requires_write
 
-    def __call__(self, current_user: User = Depends(get_current_user)) -> User:
+    def __call__(
+        self,
+        current_user: User = Depends(get_current_user),
+        session: Session = Depends(get_session)
+    ) -> User:
         role = current_user.role
         
         # Check read restrictions first
         if not self.requires_write:
-            if self.module in READ_RESTRICTIONS:
-                if role not in READ_RESTRICTIONS[self.module]:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=f"Role '{role.value}' does not have read permission for module '{self.module}'."
-                    )
+            permission_level = get_permission_level(session, self.module, role)
+            if permission_level not in {PermissionLevel.READ, PermissionLevel.WRITE}:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Role '{role.value}' does not have read permission for module '{self.module}'."
+                )
             return current_user
 
         # Check write permissions
-        allowed_roles = WRITE_PERMISSIONS.get(self.module)
-        if not allowed_roles or role not in allowed_roles:
+        permission_level = get_permission_level(session, self.module, role)
+        if permission_level != PermissionLevel.WRITE:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Role '{role.value}' does not have write permission for module '{self.module}'."

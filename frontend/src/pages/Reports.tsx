@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { 
   BarChart, 
   Bar, 
@@ -36,6 +37,7 @@ export const Reports: React.FC = () => {
   const [data, setData] = useState<ReportsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { canReadReports, permissionsReady } = useCurrentUser();
 
   useEffect(() => {
     fetchReports();
@@ -56,6 +58,18 @@ export const Reports: React.FC = () => {
 
   if (loading) {
     return <p className="text-xs text-neutral-500 text-center py-10">Compiling analytics reports data...</p>;
+  }
+
+  if (permissionsReady && !canReadReports) {
+    return (
+      <div className="p-6 bg-red-950/40 border border-red-800 rounded-2xl flex items-center gap-3 text-red-200">
+        <ShieldAlert className="w-6 h-6 text-red-400" />
+        <div>
+          <h3 className="font-bold text-neutral-100">Security Clearance Required</h3>
+          <p className="text-xs text-red-300 mt-1">Your current role does not have permission to read Reports.</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {

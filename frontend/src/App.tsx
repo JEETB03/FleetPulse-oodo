@@ -1,6 +1,5 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { api } from './api';
 
 const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -14,7 +13,7 @@ const Settings = React.lazy(() => import('./pages/Settings').then(m => ({ defaul
 
 import { 
   Gauge, Car, Users, Route as DispatchIcon, Wrench, Fuel, PieChart,
-  Settings as SettingsIcon, LogOut, Bell, Search, Sparkles, UserCheck, Menu, X
+  Settings as SettingsIcon, LogOut, Bell, Search, UserCheck, Menu, X
 } from 'lucide-react';
 
 const SIDEBAR_ITEMS = [
@@ -28,15 +27,6 @@ const SIDEBAR_ITEMS = [
   { name: 'Settings & RBAC', path: '/settings', icon: SettingsIcon },
 ];
 
-const ROLES = [
-  { role: 'Admin', email: 'admin@fleetpulse.com' },
-  { role: 'Fleet Manager', email: 'manager@fleetpulse.com' },
-  { role: 'Dispatcher', email: 'dispatcher@fleetpulse.com' },
-  { role: 'Safety Officer', email: 'safety@fleetpulse.com' },
-  { role: 'Finance Analyst', email: 'finance@fleetpulse.com' },
-  { role: 'Driver', email: 'driver@fleetpulse.com' },
-];
-
 const PageLoader = () => (
   <div className="flex items-center justify-center py-20">
     <div className="w-8 h-8 border-3 border-t-brand-500 border-neutral-800 rounded-full animate-spin" />
@@ -48,7 +38,6 @@ export const AppContent: React.FC = () => {
   const location = useLocation();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [swappingPersona, setSwappingPersona] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -67,23 +56,6 @@ export const AppContent: React.FC = () => {
     localStorage.removeItem('fleetpulse_user');
     setUser(null);
     navigate('/login');
-  };
-
-  const handlePersonaChange = async (roleName: string) => {
-    const target = ROLES.find(r => r.role === roleName);
-    if (!target) return;
-    setSwappingPersona(true);
-    try {
-      const data = await api.post<any>('/auth/login', { email: target.email, password: 'password123' });
-      localStorage.setItem('fleetpulse_token', data.access_token);
-      localStorage.setItem('fleetpulse_user', JSON.stringify(data.user));
-      setUser(data.user);
-      navigate(location.pathname, { replace: true });
-    } catch (err) {
-      console.error('Persona override failure:', err);
-    } finally {
-      setSwappingPersona(false);
-    }
   };
 
   if (loading) {
@@ -188,20 +160,6 @@ export const AppContent: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 lg:gap-4">
-            {/* <div className="flex items-center gap-2 bg-neutral-900/60 border border-neutral-800 px-2 lg:px-3 py-1.5 rounded-lg">
-              <Sparkles className="w-3.5 h-3.5 text-brand-400 animate-pulse hidden sm:block" />
-              <select
-                value={user.role}
-                onChange={(e) => handlePersonaChange(e.target.value)}
-                disabled={swappingPersona}
-                className="bg-transparent text-[11px] font-bold text-white focus:outline-none cursor-pointer max-w-[120px] lg:max-w-none"
-              >
-                {ROLES.map((r) => (
-                  <option key={r.role} value={r.role} className="bg-neutral-900 text-white">{r.role}</option>
-                ))}
-              </select>
-            </div> */}
-
             <button className="relative bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 p-2 rounded-lg text-neutral-400 hover:text-neutral-200 transition hidden sm:block">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-500" />

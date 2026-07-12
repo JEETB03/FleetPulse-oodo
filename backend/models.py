@@ -3,6 +3,11 @@ from enum import Enum
 from typing import Optional
 from sqlmodel import SQLModel, Field, Relationship
 
+class PermissionLevel(str, Enum):
+    READ = "Read"
+    WRITE = "Write"
+    NO_ACCESS = "No Access"
+
 class Role(str, Enum):
     ADMIN = "Admin"
     FLEET_MANAGER = "Fleet Manager"
@@ -24,6 +29,16 @@ class TripStatus(str, Enum):
     DELAYED = "Delayed"
     COMPLETED = "Completed"
     CANCELLED = "Cancelled"
+
+class PermissionMatrix(SQLModel, table=True):
+    module: str = Field(primary_key=True)
+    admin: PermissionLevel = Field(default=PermissionLevel.WRITE)
+    manager: PermissionLevel = Field(default=PermissionLevel.WRITE)
+    dispatcher: PermissionLevel = Field(default=PermissionLevel.READ)
+    safety: PermissionLevel = Field(default=PermissionLevel.READ)
+    finance: PermissionLevel = Field(default=PermissionLevel.READ)
+    driver: PermissionLevel = Field(default=PermissionLevel.READ)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class User(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)

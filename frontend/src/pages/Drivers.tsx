@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { 
   Plus, 
   Search, 
@@ -39,15 +40,9 @@ export const Drivers: React.FC = () => {
   const [violations, setViolations] = useState(0);
   const [hoursDriven, setHoursDriven] = useState(0);
   const [addError, setAddError] = useState('');
-
-  // Current logged in user for permission checks
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { canWriteDrivers } = useCurrentUser();
 
   useEffect(() => {
-    const userStr = localStorage.getItem('fleetpulse_user');
-    if (userStr) {
-      setCurrentUser(JSON.parse(userStr));
-    }
     fetchDrivers();
   }, []);
 
@@ -85,13 +80,6 @@ export const Drivers: React.FC = () => {
     }
   };
 
-  // Check write access (Admin, Fleet Manager, Safety Officer)
-  const hasWriteAccess = currentUser && (
-    currentUser.role === 'Admin' || 
-    currentUser.role === 'Fleet Manager' || 
-    currentUser.role === 'Safety Officer'
-  );
-
   const filteredDrivers = drivers.filter(d => 
     d.name.toLowerCase().includes(search.toLowerCase()) || 
     d.license_no.toLowerCase().includes(search.toLowerCase())
@@ -106,7 +94,7 @@ export const Drivers: React.FC = () => {
           <p className="text-xs text-neutral-400 mt-1">Real-time driver fatigue index and safety score engine auditing.</p>
         </div>
         <div>
-          {hasWriteAccess ? (
+          {canWriteDrivers ? (
             <button 
               onClick={() => setShowAddModal(true)}
               className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-xs px-4 py-2.5 rounded-lg transition font-semibold shadow-lg shadow-brand-500/10"

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { 
   Plus, 
   Wrench, 
@@ -41,15 +42,9 @@ export const Maintenance: React.FC = () => {
   const [odometerKm, setOdometerKm] = useState(0);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState('');
-
-  // Current logged in user for permission checks
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { canWriteMaintenance } = useCurrentUser();
 
   useEffect(() => {
-    const userStr = localStorage.getItem('fleetpulse_user');
-    if (userStr) {
-      setCurrentUser(JSON.parse(userStr));
-    }
     fetchData();
   }, []);
 
@@ -103,12 +98,6 @@ export const Maintenance: React.FC = () => {
     setShowLogModal(true);
   };
 
-  // Check write access (Admin, Fleet Manager)
-  const hasWriteAccess = currentUser && (
-    currentUser.role === 'Admin' || 
-    currentUser.role === 'Fleet Manager'
-  );
-
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -118,7 +107,7 @@ export const Maintenance: React.FC = () => {
           <p className="text-xs text-neutral-400 mt-1">Multi-factor engine risk index monitoring (miles since service + days + engine hours).</p>
         </div>
         <div>
-          {hasWriteAccess ? (
+          {canWriteMaintenance ? (
             <button 
               onClick={() => setShowLogModal(true)}
               className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-xs px-4 py-2.5 rounded-lg transition font-semibold shadow-lg shadow-brand-500/10"
@@ -230,7 +219,7 @@ export const Maintenance: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-4 text-right">
-                        {hasWriteAccess ? (
+                        {canWriteMaintenance ? (
                           <button
                             onClick={() => handleOpenLogModal(u.vehicle_id)}
                             className="bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 border border-brand-500/20 text-[10px] font-semibold px-2.5 py-1 rounded transition flex items-center gap-1 ml-auto"

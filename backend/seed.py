@@ -2,14 +2,35 @@ from datetime import datetime, date, timedelta
 from sqlmodel import Session
 
 from backend.database import engine
-from backend.models import User, Role, Vehicle, VehicleStatus, Driver, Trip, TripStatus, FuelLogEntry, ServiceLogEntry
+from backend.models import PermissionMatrix, PermissionLevel, User, Role, Vehicle, VehicleStatus, Driver, Trip, TripStatus, FuelLogEntry, ServiceLogEntry
 from backend.auth import get_password_hash
+
+
+def seed_permission_matrix(session: Session):
+    if session.get(PermissionMatrix, "vehicles") is not None:
+        return
+
+    default_permissions = [
+        PermissionMatrix(module="vehicles", admin=PermissionLevel.WRITE, manager=PermissionLevel.WRITE, dispatcher=PermissionLevel.READ, safety=PermissionLevel.READ, finance=PermissionLevel.READ, driver=PermissionLevel.READ),
+        PermissionMatrix(module="drivers", admin=PermissionLevel.WRITE, manager=PermissionLevel.WRITE, dispatcher=PermissionLevel.READ, safety=PermissionLevel.WRITE, finance=PermissionLevel.READ, driver=PermissionLevel.READ),
+        PermissionMatrix(module="dispatch", admin=PermissionLevel.WRITE, manager=PermissionLevel.WRITE, dispatcher=PermissionLevel.WRITE, safety=PermissionLevel.READ, finance=PermissionLevel.READ, driver=PermissionLevel.READ),
+        PermissionMatrix(module="maintenance", admin=PermissionLevel.WRITE, manager=PermissionLevel.WRITE, dispatcher=PermissionLevel.READ, safety=PermissionLevel.READ, finance=PermissionLevel.READ, driver=PermissionLevel.READ),
+        PermissionMatrix(module="fuel_expense", admin=PermissionLevel.WRITE, manager=PermissionLevel.WRITE, dispatcher=PermissionLevel.READ, safety=PermissionLevel.READ, finance=PermissionLevel.WRITE, driver=PermissionLevel.READ),
+        PermissionMatrix(module="reports", admin=PermissionLevel.READ, manager=PermissionLevel.READ, dispatcher=PermissionLevel.NO_ACCESS, safety=PermissionLevel.READ, finance=PermissionLevel.READ, driver=PermissionLevel.NO_ACCESS),
+        PermissionMatrix(module="settings", admin=PermissionLevel.WRITE, manager=PermissionLevel.NO_ACCESS, dispatcher=PermissionLevel.NO_ACCESS, safety=PermissionLevel.NO_ACCESS, finance=PermissionLevel.NO_ACCESS, driver=PermissionLevel.NO_ACCESS),
+    ]
+
+    for permission in default_permissions:
+        session.add(permission)
+    session.commit()
 
 def seed_database():
     with Session(engine) as session:
+        seed_permission_matrix(session)
+
         # Check if users already exist
         if session.query(User).first() is not None:
-            print("Database already seeded. Skipping.")
+            print("Database already seeded. Skipping demo data.")
             return
 
         print("Seeding database with realistic FleetPulse data...")
