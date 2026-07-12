@@ -188,7 +188,7 @@ export const AppContent: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 lg:gap-4">
-            <div className="flex items-center gap-2 bg-neutral-900/60 border border-neutral-800 px-2 lg:px-3 py-1.5 rounded-lg">
+            {/* <div className="flex items-center gap-2 bg-neutral-900/60 border border-neutral-800 px-2 lg:px-3 py-1.5 rounded-lg">
               <Sparkles className="w-3.5 h-3.5 text-brand-400 animate-pulse hidden sm:block" />
               <select
                 value={user.role}
@@ -200,7 +200,7 @@ export const AppContent: React.FC = () => {
                   <option key={r.role} value={r.role} className="bg-neutral-900 text-neutral-200">{r.role}</option>
                 ))}
               </select>
-            </div>
+            </div> */}
 
             <button className="relative bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 p-2 rounded-lg text-neutral-400 hover:text-neutral-200 transition hidden sm:block">
               <Bell className="w-4 h-4" />
