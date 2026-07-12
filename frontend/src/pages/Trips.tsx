@@ -256,7 +256,7 @@ export const Trips: React.FC = () => {
                 <div key={trip.id} className="glass p-4 rounded-xl border border-neutral-800 space-y-3 hover:border-neutral-700 transition">
                   <div className="flex justify-between items-start">
                     <span className="font-mono text-[10px] text-brand-400 font-bold">{trip.id}</span>
-                    <span className="text-[9px] bg-neutral-800 text-neutral-400 px-1.5 py-0.5 rounded border border-neutral-800">Pending</span>
+                    <span className="text-[9px] bg-neutral-800 text-white px-1.5 py-0.5 rounded border border-neutral-800">Pending</span>
                   </div>
                   
                   <div className="space-y-1">
@@ -314,8 +314,8 @@ export const Trips: React.FC = () => {
                 <div key={trip.id} className="glass p-4 rounded-xl border border-neutral-800 space-y-3 hover:border-neutral-700 transition">
                   <div className="flex justify-between items-start">
                     <span className="font-mono text-[10px] text-brand-400 font-bold">{trip.id}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded border ${
-                      trip.status === 'Delayed' ? 'bg-amber-950/60 text-amber-400 border-amber-800/40' : 'bg-blue-950/60 text-blue-400 border-blue-800/40'
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded border text-white ${
+                      trip.status === 'Delayed' ? 'bg-amber-950/60 border-amber-800/40' : 'bg-blue-950/60 border-blue-800/40'
                     }`}>
                       {trip.status}
                     </span>
@@ -387,7 +387,7 @@ export const Trips: React.FC = () => {
                 <div key={trip.id} className="bg-neutral-950/60 p-4 rounded-xl border border-neutral-900 space-y-3">
                   <div className="flex justify-between items-start">
                     <span className="font-mono text-[10px] text-neutral-500 font-bold">{trip.id}</span>
-                    <span className="text-[9px] bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 px-1.5 py-0.5 rounded">Completed</span>
+                    <span className="text-[9px] bg-emerald-950/60 text-white border border-emerald-800/40 px-1.5 py-0.5 rounded">Completed</span>
                   </div>
                   
                   <div className="space-y-1">
@@ -420,7 +420,7 @@ export const Trips: React.FC = () => {
                 <div key={trip.id} className="bg-neutral-950/40 p-4 rounded-xl border border-neutral-900 space-y-3">
                   <div className="flex justify-between items-start">
                     <span className="font-mono text-[10px] text-neutral-500 font-bold">{trip.id}</span>
-                    <span className="text-[9px] bg-red-950/60 text-red-400 border border-red-800/40 px-1.5 py-0.5 rounded">Cancelled</span>
+                    <span className="text-[9px] bg-red-950/60 text-white border border-red-800/40 px-1.5 py-0.5 rounded">Cancelled</span>
                   </div>
                   
                   <div className="space-y-1">
@@ -572,11 +572,11 @@ export const Trips: React.FC = () => {
                       <select
                         value={vehicleId}
                         onChange={(e) => setVehicleId(e.target.value)}
-                        className="w-full bg-neutral-900 border border-neutral-800 rounded-lg p-2 text-neutral-200"
+                        className="w-full bg-neutral-900 border border-neutral-800 rounded-lg p-2 text-white"
                       >
                         <option value="">-- Select --</option>
                         {vehicles.map(v => (
-                          <option key={v.id} value={v.id}>{v.plate_no} ({v.v_type} - {v.status})</option>
+                          <option key={v.id} value={v.id} className="bg-neutral-900 text-white">{v.plate_no} ({v.v_type} - {v.status})</option>
                         ))}
                       </select>
                     </div>
@@ -585,11 +585,11 @@ export const Trips: React.FC = () => {
                       <select
                         value={driverId}
                         onChange={(e) => setDriverId(e.target.value)}
-                        className="w-full bg-neutral-900 border border-neutral-800 rounded-lg p-2 text-neutral-200"
+                        className="w-full bg-neutral-900 border border-neutral-800 rounded-lg p-2 text-white"
                       >
                         <option value="">-- Select --</option>
                         {drivers.map(d => (
-                          <option key={d.id} value={d.id}>{d.name} (Score: {d.safety_score})</option>
+                          <option key={d.id} value={d.id} className="bg-neutral-900 text-white">{d.name} (Score: {d.safety_score})</option>
                         ))}
                       </select>
                     </div>

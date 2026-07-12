@@ -160,14 +160,14 @@ export const Vehicles: React.FC = () => {
             placeholder="Search by license plate or vehicle type..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg pl-9 pr-4 py-2.5 text-xs text-neutral-200 focus:outline-none focus:border-brand-500 transition"
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg pl-9 pr-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500 transition"
           />
         </div>
         <div>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2.5 text-xs text-neutral-300 focus:outline-none focus:border-brand-500 transition"
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500 transition"
           >
             <option value="">All Vehicle Types</option>
             <option value="Bus">Bus</option>
@@ -179,7 +179,7 @@ export const Vehicles: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2.5 text-xs text-neutral-300 focus:outline-none focus:border-brand-500 transition"
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500 transition"
           >
             <option value="">All Statuses</option>
             <option value="Active">Active</option>
@@ -221,12 +221,12 @@ export const Vehicles: React.FC = () => {
                 </tr>
               ) : (
                 filteredVehicles.map((v) => {
-                  let statusColor = 'bg-neutral-800 text-neutral-300';
-                  if (v.status === 'Active') statusColor = 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40';
-                  if (v.status === 'On Trip') statusColor = 'bg-blue-950/60 text-blue-400 border border-blue-800/40';
-                  if (v.status === 'Idle') statusColor = 'bg-neutral-800 text-neutral-300 border border-neutral-700/40';
-                  if (v.status === 'In Shop') statusColor = 'bg-amber-950/60 text-amber-400 border border-amber-800/40';
-                  if (v.status === 'Retired') statusColor = 'bg-red-950/60 text-red-400 border border-red-800/40';
+                  let statusColor = 'bg-neutral-800 text-white';
+                  if (v.status === 'Active') statusColor = 'bg-emerald-950/60 text-white border border-emerald-800/40';
+                  if (v.status === 'On Trip') statusColor = 'bg-blue-950/60 text-white border border-blue-800/40';
+                  if (v.status === 'Idle') statusColor = 'bg-neutral-800 text-white border border-neutral-700/40';
+                  if (v.status === 'In Shop') statusColor = 'bg-amber-950/60 text-white border border-amber-800/40';
+                  if (v.status === 'Retired') statusColor = 'bg-red-950/60 text-white border border-red-800/40';
 
                   return (
                     <tr 
@@ -235,7 +235,7 @@ export const Vehicles: React.FC = () => {
                       className="hover:bg-neutral-900/40 transition cursor-pointer group"
                     >
                       <td className="p-4 font-mono font-bold text-neutral-200 group-hover:text-brand-400 transition">{v.plate_no}</td>
-                      <td className="p-4">{v.v_type}</td>
+                      <td className="p-4 text-white">{v.v_type}</td>
                       <td className="p-4 font-mono text-neutral-300">{v.odometer_km.toLocaleString()} km</td>
                       <td className="p-4 text-neutral-400">{new Date(v.last_service_date).toLocaleDateString()}</td>
                       <td className="p-4 text-neutral-400">{new Date(v.insurance_expiry).toLocaleDateString()}</td>
@@ -264,7 +264,7 @@ export const Vehicles: React.FC = () => {
           <div className="glass w-full max-w-4xl rounded-2xl border border-neutral-800 max-h-[85vh] overflow-y-auto p-6">
             <div className="flex justify-between items-start pb-4 border-b border-neutral-800 mb-6">
               <div>
-                <span className="text-[10px] text-brand-400 font-mono font-bold uppercase tracking-wider">{selectedVehicle.v_type} Registry Details</span>
+                <span className="text-[10px] text-white font-mono font-bold uppercase tracking-wider">{selectedVehicle.v_type} Registry Details</span>
                 <h2 className="text-xl font-bold text-neutral-100 flex items-center gap-2 mt-1">
                   License Plate: <span className="font-mono text-brand-400">{selectedVehicle.plate_no}</span>
                 </h2>
@@ -291,7 +291,7 @@ export const Vehicles: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-neutral-400">Current Status:</span>
-                  <span className="font-semibold text-brand-400">{selectedVehicle.status}</span>
+                  <span className="font-semibold text-white">{selectedVehicle.status}</span>
                 </div>
               </div>
 
