@@ -11,6 +11,15 @@ interface DashboardStats {
   active_trips_count: number;
   compliance_alerts: Array<{ plate_no: string; message: string }>;
   fuel_anomalies: Array<{ message: string }>;
+  severe_notifications: Array<{
+    id: string;
+    driver_id: string;
+    driver_name: string;
+    tag: string;
+    description: string;
+    location: string;
+    created_at: string;
+  }>;
 }
 
 export const Dashboard: React.FC = () => {
@@ -163,6 +172,30 @@ export const Dashboard: React.FC = () => {
               <div key={i} className="text-xs flex items-center gap-2 bg-neutral-950/40 p-2.5 rounded-lg border border-neutral-900 text-amber-300">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                 <span className="truncate">{a.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {stats.severe_notifications?.length > 0 && (
+        <div className="bg-red-950/25 border border-red-800/70 rounded-xl p-4">
+          <div className="flex items-center gap-2 text-red-400 mb-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase tracking-wider">Severe Driver Alerts</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {stats.severe_notifications.map((notification) => (
+              <div key={notification.id} className="bg-neutral-950/40 border border-red-900/40 rounded-lg p-3 text-xs text-red-200">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="px-2 py-0.5 rounded-full bg-red-950/80 border border-red-800 text-[10px] font-bold uppercase tracking-wider text-white">Red Tag</span>
+                  <span className="text-[10px] text-neutral-400">{new Date(notification.created_at).toLocaleString()}</span>
+                </div>
+                <div className="font-semibold text-neutral-100 mb-1">{notification.driver_name}</div>
+                <div className="text-red-300 leading-relaxed">{notification.description}</div>
+                <div className="mt-2 text-[10px] text-neutral-400">
+                  Location: <span className="text-neutral-200">{notification.location}</span>
+                </div>
               </div>
             ))}
           </div>

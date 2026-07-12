@@ -25,6 +25,10 @@ class TripStatus(str, Enum):
     COMPLETED = "Completed"
     CANCELLED = "Cancelled"
 
+class NotificationTag(str, Enum):
+    RED = "Red"
+    YELLOW = "Yellow"
+
 class User(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
     name: str
@@ -80,6 +84,15 @@ class Trip(SQLModel, table=True):
     # Relationships
     vehicle: Optional[Vehicle] = Relationship(back_populates="trips")
     driver: Optional[Driver] = Relationship(back_populates="trips")
+
+class Notification(SQLModel, table=True):
+    id: str = Field(default=None, primary_key=True)
+    driver_id: str
+    driver_name: str
+    tag: NotificationTag
+    description: str
+    location: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class ServiceLogEntry(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)

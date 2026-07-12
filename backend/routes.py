@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 from backend.database import get_session
 from backend.models import (
     User, Role, Vehicle, VehicleStatus, Driver, Trip, TripStatus,
-    ServiceLogEntry, FuelLogEntry
+    ServiceLogEntry, FuelLogEntry, Notification, NotificationTag
 )
 from backend.auth import (
     get_password_hash, verify_password, create_access_token,
@@ -97,6 +97,11 @@ class ServiceLogCreate(BaseModel):
     description: str
     cost: float
     odometer_km: float
+
+class NotificationCreate(BaseModel):
+    tag: NotificationTag
+    description: str
+    location: str
 
 # ---------------------------------------------------------------------------
 # Authentication Routes
@@ -520,6 +525,39 @@ def get_fuel_anomalies(
 # Analytics Routes
 # ---------------------------------------------------------------------------
 
+@router.get("/notifications", response_model=List[Notification])
+def get_notifications(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    return session.exec(select(Notification).order_by(Notification.created_at.desc())).all()
+
+@router.post("/notifications", response_model=Notification, status_code=status.HTTP_201_CREATED)
+def create_notification(
+    payload: NotificationCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    if current_user.role != Role.DRIVER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only drivers can submit notifications")
+
+    driver = session.exec(select(Driver).where(Driver.linked_user_id == current_user.id)).first()
+    driver_id = driver.id if driver else current_user.id
+    driver_name = driver.name if driver else current_user.name
+
+    notification = Notification(
+        id=str(uuid.uuid4())[:8],
+        driver_id=driver_id,
+        driver_name=driver_name,
+        tag=payload.tag,
+        description=payload.description,
+        location=payload.location,
+    )
+    session.add(notification)
+    session.commit()
+    session.refresh(notification)
+    return notification
+
 @router.get("/analytics/dashboard")
 def get_dashboard_analytics(
     current_user: User = Depends(get_current_user),
@@ -530,6 +568,7 @@ def get_dashboard_analytics(
     trips = session.exec(select(Trip)).all()
     fuel_logs = session.exec(select(FuelLogEntry)).all()
     service_logs = session.exec(select(ServiceLogEntry)).all()
+    notifications = session.exec(select(Notification)).all()
 
     # Counts by status
     vehicle_counts = {status.value: 0 for status in VehicleStatus}
@@ -542,6 +581,7 @@ def get_dashboard_analytics(
     # Alerts & anomalies
     compliance_alerts = ComplianceEngine.insurance_alerts(vehicles)
     fuel_anomalies = FuelAnomalyEngine.detect_anomalies(fuel_logs)
+    severe_notifications = [n for n in notifications if n.tag == NotificationTag.RED][:10]
 
     return {
         "vehicle_counts": vehicle_counts,
@@ -550,7 +590,8 @@ def get_dashboard_analytics(
         "total_trips": len(trips),
         "active_trips_count": active_trips_count,
         "compliance_alerts": compliance_alerts,
-        "fuel_anomalies": fuel_anomalies
+        "fuel_anomalies": fuel_anomalies,
+        "severe_notifications": severe_notifications
     }
 
 @router.get("/analytics/reports")

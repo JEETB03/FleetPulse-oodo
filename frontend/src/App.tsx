@@ -11,11 +11,13 @@ const Maintenance = React.lazy(() => import('./pages/Maintenance').then(m => ({ 
 const FuelExpense = React.lazy(() => import('./pages/Fuel').then(m => ({ default: m.FuelExpense })));
 const Reports = React.lazy(() => import('./pages/Reports').then(m => ({ default: m.Reports })));
 const Settings = React.lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
+const Notifications = React.lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })));
 
 import { 
   Gauge, Car, Users, Route as DispatchIcon, Wrench, Fuel, PieChart,
-  Settings as SettingsIcon, LogOut, Bell, Search, Sparkles, UserCheck, Menu, X
+  Settings as SettingsIcon, LogOut, Bell, Search, UserCheck, Menu, X
 } from 'lucide-react';
+import { useToast } from './hooks/useToast';
 
 const SIDEBAR_ITEMS = [
   { name: 'Dashboard', path: '/', icon: Gauge },
@@ -28,15 +30,6 @@ const SIDEBAR_ITEMS = [
   { name: 'Settings & RBAC', path: '/settings', icon: SettingsIcon },
 ];
 
-const ROLES = [
-  { role: 'Admin', email: 'admin@fleetpulse.com' },
-  { role: 'Fleet Manager', email: 'manager@fleetpulse.com' },
-  { role: 'Dispatcher', email: 'dispatcher@fleetpulse.com' },
-  { role: 'Safety Officer', email: 'safety@fleetpulse.com' },
-  { role: 'Finance Analyst', email: 'finance@fleetpulse.com' },
-  { role: 'Driver', email: 'driver@fleetpulse.com' },
-];
-
 const PageLoader = () => (
   <div className="flex items-center justify-center py-20">
     <div className="w-8 h-8 border-3 border-t-brand-500 border-neutral-800 rounded-full animate-spin" />
@@ -46,10 +39,15 @@ const PageLoader = () => (
 export const AppContent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToast();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [swappingPersona, setSwappingPersona] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationTag, setNotificationTag] = useState<'Red' | 'Yellow'>('Red');
+  const [notificationDescription, setNotificationDescription] = useState('');
+  const [notificationLocation, setNotificationLocation] = useState('');
+  const [submittingNotification, setSubmittingNotification] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem('fleetpulse_user');
@@ -69,20 +67,26 @@ export const AppContent: React.FC = () => {
     navigate('/login');
   };
 
-  const handlePersonaChange = async (roleName: string) => {
-    const target = ROLES.find(r => r.role === roleName);
-    if (!target) return;
-    setSwappingPersona(true);
+  const handleNotificationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || user.role !== 'Driver') return;
+
+    setSubmittingNotification(true);
     try {
-      const data = await api.post<any>('/auth/login', { email: target.email, password: 'password123' });
-      localStorage.setItem('fleetpulse_token', data.access_token);
-      localStorage.setItem('fleetpulse_user', JSON.stringify(data.user));
-      setUser(data.user);
-      navigate(location.pathname, { replace: true });
-    } catch (err) {
-      console.error('Persona override failure:', err);
+      await api.post('/notifications', {
+        tag: notificationTag,
+        description: notificationDescription,
+        location: notificationLocation,
+      });
+      setNotificationTag('Red');
+      setNotificationDescription('');
+      setNotificationLocation('');
+      setShowNotificationModal(false);
+      toast('Notification sent successfully.', 'success');
+    } catch (err: any) {
+      toast(err.message || 'Failed to send notification.', 'error');
     } finally {
-      setSwappingPersona(false);
+      setSubmittingNotification(false);
     }
   };
 
@@ -188,21 +192,21 @@ export const AppContent: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 lg:gap-4">
-            {/* <div className="flex items-center gap-2 bg-neutral-900/60 border border-neutral-800 px-2 lg:px-3 py-1.5 rounded-lg">
-              <Sparkles className="w-3.5 h-3.5 text-brand-400 animate-pulse hidden sm:block" />
-              <select
-                value={user.role}
-                onChange={(e) => handlePersonaChange(e.target.value)}
-                disabled={swappingPersona}
-                className="bg-transparent text-[11px] font-bold text-white focus:outline-none cursor-pointer max-w-[120px] lg:max-w-none"
+            {user.role === 'Driver' && (
+              <button
+                type="button"
+                onClick={() => setShowNotificationModal(true)}
+                className="hidden sm:flex items-center gap-2 bg-red-950/60 hover:bg-red-950 border border-red-800/60 px-3 py-1.5 rounded-lg text-[11px] font-bold text-white transition"
               >
-                {ROLES.map((r) => (
-                  <option key={r.role} value={r.role} className="bg-neutral-900 text-white">{r.role}</option>
-                ))}
-              </select>
-            </div> */}
+                Want to Notify
+              </button>
+            )}
 
-            <button className="relative bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 p-2 rounded-lg text-neutral-400 hover:text-neutral-200 transition hidden sm:block">
+            <button
+              type="button"
+              onClick={() => navigate('/notifications')}
+              className="relative bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 p-2 rounded-lg text-neutral-400 hover:text-neutral-200 transition hidden sm:block"
+            >
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-500" />
             </button>
@@ -224,10 +228,86 @@ export const AppContent: React.FC = () => {
               <Route path="/fuel" element={<FuelExpense />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/notifications" element={<Notifications />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </main>
+
+        {showNotificationModal && user.role === 'Driver' && (
+          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="glass w-full max-w-lg rounded-2xl border border-neutral-800 p-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-start pb-4 border-b border-neutral-800 mb-4">
+                <h2 className="text-lg font-bold text-neutral-100">Driver Notification</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowNotificationModal(false)}
+                  className="bg-neutral-900 hover:bg-neutral-800 p-1.5 rounded-lg border border-neutral-800 text-neutral-400 hover:text-neutral-200 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setNotificationTag('Red')}
+                  className={`rounded-xl border px-4 py-3 text-left font-semibold transition ${notificationTag === 'Red' ? 'bg-red-950/80 border-red-700 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-300'}`}
+                >
+                  <span className="block text-[10px] uppercase tracking-wider text-red-300 mb-1">Red Tag</span>
+                  Severe issue or urgent help needed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNotificationTag('Yellow')}
+                  className={`rounded-xl border px-4 py-3 text-left font-semibold transition ${notificationTag === 'Yellow' ? 'bg-amber-950/80 border-amber-700 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-300'}`}
+                >
+                  <span className="block text-[10px] uppercase tracking-wider text-amber-300 mb-1">Yellow Tag</span>
+                  Caution, warning, or update request
+                </button>
+              </div>
+
+              <form onSubmit={handleNotificationSubmit} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Description</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={notificationDescription}
+                    onChange={(e) => setNotificationDescription(e.target.value)}
+                    placeholder="Describe the issue or update needed..."
+                    className="w-full bg-white border border-neutral-300 rounded-xl p-3 text-sm text-black focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Current Location</label>
+                  <input
+                    type="text"
+                    required
+                    value={notificationLocation}
+                    onChange={(e) => setNotificationLocation(e.target.value)}
+                    placeholder="Where are you right now?"
+                    className="w-full bg-white border border-neutral-300 rounded-xl p-3 text-sm text-black focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 transition"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  <div className="text-[10px] text-neutral-500">
+                    Submitted by <span className="font-semibold text-neutral-300">{user.name}</span>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={submittingNotification}
+                    className="bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-lg px-4 py-2 transition disabled:opacity-50"
+                  >
+                    {submittingNotification ? 'Sending...' : 'Send Notification'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
