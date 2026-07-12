@@ -188,7 +188,7 @@ export const Dashboard: React.FC = () => {
             {stats.severe_notifications.map((notification) => (
               <div key={notification.id} className="bg-neutral-950/40 border border-red-900/40 rounded-lg p-3 text-xs text-red-200">
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="px-2 py-0.5 rounded-full bg-red-950/80 border border-red-800 text-[10px] font-bold uppercase tracking-wider text-white">Red Tag</span>
+                  <span className="px-2 py-0.5 rounded-full bg-red-950/80 border border-red-800 text-[10px] font-bold uppercase tracking-wider text-white">🔴</span>
                   <span className="text-[10px] text-neutral-400">{new Date(notification.created_at).toLocaleString()}</span>
                 </div>
                 <div className="font-semibold text-neutral-100 mb-1">{notification.driver_name}</div>

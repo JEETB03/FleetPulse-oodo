@@ -254,16 +254,14 @@ export const AppContent: React.FC = () => {
                   onClick={() => setNotificationTag('Red')}
                   className={`rounded-xl border px-4 py-3 text-left font-semibold transition ${notificationTag === 'Red' ? 'bg-red-950/80 border-red-700 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-300'}`}
                 >
-                  <span className="block text-[10px] uppercase tracking-wider text-red-300 mb-1">Red Tag</span>
-                  Severe issue or urgent help needed
+                  🔴  Severe issue 
                 </button>
                 <button
                   type="button"
                   onClick={() => setNotificationTag('Yellow')}
                   className={`rounded-xl border px-4 py-3 text-left font-semibold transition ${notificationTag === 'Yellow' ? 'bg-amber-950/80 border-amber-700 text-white' : 'bg-neutral-950 border-neutral-800 text-neutral-300'}`}
                 >
-                  <span className="block text-[10px] uppercase tracking-wider text-amber-300 mb-1">Yellow Tag</span>
-                  Caution, warning, or update request
+                  🟡  Minor issue
                 </button>
               </div>
 
