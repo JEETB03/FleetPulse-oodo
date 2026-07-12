@@ -335,7 +335,7 @@ export const FuelExpense: React.FC = () => {
                     const sel = vehicles.find(v => v.id === e.target.value);
                     if (sel) setOdometerKm(sel.odometer_km);
                   }}
-                  className="w-full bg-neutral-905 border border-neutral-800 rounded-lg p-2.5 text-neutral-200 focus:outline-none focus:border-brand-500 transition"
+                  className="w-full bg-neutral-905 border border-neutral-800 rounded-lg p-2.5 text-black focus:outline-none focus:border-brand-500 transition"
                 >
                   <option value="">-- Choose Vehicle --</option>
                   {vehicles.map(v => (
@@ -399,7 +399,7 @@ export const FuelExpense: React.FC = () => {
                   type="file"
                   accept="image/*,application/pdf"
                   onChange={handleFileChange}
-                  className="w-full text-neutral-300 text-xs bg-neutral-905 border border-neutral-800 rounded-lg p-2 focus:outline-none focus:border-brand-500 transition file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-neutral-850 file:text-white hover:file:bg-neutral-750 file:cursor-pointer"
+                  className="w-full text-neutral-400 text-xs bg-neutral-905 border border-neutral-800 rounded-lg p-2 focus:outline-none focus:border-brand-500 transition file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-neutral-850 file:text-black hover:file:bg-neutral-750 file:cursor-pointer"
                 />
               </div>
 
