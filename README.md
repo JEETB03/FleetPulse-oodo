@@ -1,113 +1,103 @@
 # FleetPulse
 
-**FleetPulse** is a full-stack fleet operations management platform for tracking vehicles, drivers, trips, maintenance, fuel expenses, and analytics — with role-based access control (RBAC) and intelligent dispatch automation.
+FleetPulse is a fleet operations management MVP for teams that need a single place to manage vehicles, drivers, trips, maintenance, fuel spend, reporting, and role-based access control.
 
-Built as a modern alternative to traditional ERP/fleet modules (inspired by Odoo-style fleet workflows), FleetPulse provides a real-time **Live Ops Center** dashboard for fleet managers, dispatchers, safety officers, finance analysts, and drivers.
+It is designed to solve a simple but common problem: fleet data is usually scattered across spreadsheets, manual approvals, and disconnected tools. That creates blind spots in dispatch, maintenance, fuel control, and compliance. FleetPulse brings those workflows into one data-driven system so operators can see what is happening, act faster, and make decisions from live records instead of hardcoded demo data.
 
----
+## What Problem It Solves
 
-## Features
+Most small and mid-sized fleet teams face the same issues:
 
-### Core Modules
+- Vehicle, driver, and trip data live in separate places.
+- Maintenance and insurance tracking depends on manual follow-up.
+- Fuel usage and operating cost anomalies are hard to spot early.
+- Different roles need different access, but permission rules are often inconsistent.
+- Dashboards look good in demos but do not reflect real backend data.
 
-| Module | Description |
-|--------|-------------|
-| **Dashboard** | Live KPIs — active trips, fleet utilization, compliance alerts, fuel spend, and sustainability metrics |
-| **Vehicles** | Register and manage buses, vans, and trucks with odometer, insurance, and service tracking |
-| **Drivers** | Driver profiles with license expiry, violation history, safety scores, and hours-driven tracking |
-| **Trips & Dispatch** | Create trips, manual/auto-assign vehicles & drivers, and manage trip lifecycle (start, delay, complete, cancel) |
-| **Maintenance** | Service log entries, upcoming maintenance predictions, and overdue service alerts |
-| **Fuel & Expenses** | Fuel log tracking with anomaly detection for unusual consumption patterns |
-| **Analytics & Reports** | Dashboard analytics and exportable operational reports |
-| **Settings & RBAC** | Role-based permissions across all modules |
+FleetPulse addresses that by making the backend the source of truth for fleet records, permissions, and analytics.
 
-### Intelligent Engines
+## Why We Built It
 
-FleetPulse includes several backend engines that power smart fleet decisions:
+This project started as a demo-heavy fleet app, but the goal now is a real MVP foundation that can grow into a production system.
 
-- **SafetyScoreEngine** — Computes driver safety scores (0–100) based on violations, fatigue risk (>50 hrs/7 days), and experience
-- **DispatchEngine** — Auto-assigns the best rested driver (highest safety score) and least-overdue vehicle to each trip, with conflict and rest-gap validation
-- **MaintenanceEngine** — Predicts upcoming service needs based on km and time since last service
-- **FuelAnomalyEngine** — Detects abnormal fuel consumption using statistical deviation analysis
-- **ComplianceEngine** — Flags expired or soon-to-expire insurance and license documents
-- **SustainabilityEngine** — Tracks fleet carbon footprint and efficiency metrics
+We are solving for:
 
-### Role-Based Access Control
+- a data-driven user experience rather than hardcoded UI state,
+- admin-controlled RBAC so access rules can be edited safely,
+- backend-owned analytics and reports,
+- a structure that can later support onboarding, imports, and offline operations.
 
-Six predefined roles with granular module permissions:
+## What It Does
 
-| Role | Access |
-|------|--------|
-| **Admin** | Full access to all modules including settings |
-| **Fleet Manager** | Vehicles, drivers, dispatch, maintenance, fuel, reports |
-| **Dispatcher** | Trip creation and dispatch operations |
-| **Safety Officer** | Driver management and safety reports |
-| **Finance Analyst** | Fuel/expense logging and financial reports |
-| **Driver** | Read-only access to assigned operations |
+FleetPulse currently provides:
 
----
+- real-time dashboard KPIs for fleet status, active trips, compliance, and fuel anomalies,
+- vehicle registry with service, insurance, and odometer tracking,
+- driver profiles with safety scoring and fatigue awareness,
+- trip dispatch with lifecycle actions like start, delay, complete, and cancel,
+- maintenance logging and overdue risk monitoring,
+- fuel expense tracking with anomaly detection,
+- reports and analytics driven by backend aggregates,
+- admin-editable permission matrix for role-based access control.
 
-## Tech Stack
+## How It Works
 
-### Backend
-- **FastAPI** — High-performance Python API framework
-- **SQLModel** — ORM built on SQLAlchemy + Pydantic
-- **SQLite** — Lightweight embedded database (configurable via `DATABASE_URL`)
-- **JWT Authentication** — Secure token-based auth with bcrypt password hashing
-- **Uvicorn** — ASGI server
+FleetPulse is structured as a simple full-stack application:
 
-### Frontend
-- **React 18** with **TypeScript**
-- **Vite** — Fast dev server and build tool
-- **Tailwind CSS** — Utility-first styling
-- **React Router v6** — Client-side routing
-- **Recharts** — Data visualization
-- **Lucide React** — Icon library
+- The backend stores operational data in SQLite through SQLModel.
+- FastAPI exposes the APIs used by the frontend.
+- The frontend React app reads live data from those APIs.
+- Authentication uses JWT tokens and bcrypt password hashing.
+- RBAC rules are persisted in the database and editable by Admin users.
+- Seed data exists only as bootstrap/demo data so the app can start quickly in development.
 
-### DevOps
-- **Docker & Docker Compose** — Containerized deployment for backend and frontend
+### Core Data Flow
 
----
+1. A user logs in through the frontend.
+2. The backend validates credentials and returns a JWT token.
+3. The frontend uses the token for all API requests.
+4. Dashboard, vehicles, drivers, trips, fuel, reports, and settings all render backend-owned data.
+5. Admin users can edit the permission matrix from Settings.
 
-## Project Structure
+## Current MVP Scope
 
-```
-FleetPulse/
-├── backend/
-│   ├── main.py              # FastAPI app entry point
-│   ├── routes.py            # API endpoints (/api/v1)
-│   ├── models.py            # SQLModel database models
-│   ├── services.py          # Business logic engines
-│   ├── auth.py              # JWT auth & RBAC permissions
-│   ├── database.py          # Database engine & session
-│   ├── seed.py              # Demo data seeder
-│   ├── requirements.txt     # Python dependencies
-│   ├── Dockerfile
-│   └── test_all_features.py # Integration tests
-├── frontend/
-│   ├── src/
-│   │   ├── pages/           # Dashboard, Vehicles, Drivers, Trips, etc.
-│   │   ├── api.ts           # API client
-│   │   ├── App.tsx          # Router & layout shell
-│   │   └── main.tsx         # React entry point
-│   ├── package.json
-│   └── Dockerfile
-├── docker-compose.yml
-├── .env.example
-└── README.md
-```
+The app currently covers:
 
----
+- authentication and session storage,
+- fleet entity management,
+- dispatch and trip lifecycle operations,
+- maintenance and fuel logging,
+- operational analytics,
+- role-based permissions,
+- seeded demo data for development and review.
+
+## What Is No Longer Hardcoded
+
+The app has been moved away from frontend-only demo state in the most important places:
+
+- the permission matrix now lives in the backend,
+- Settings reads and edits permissions through API calls,
+- user lists are backend-sourced,
+- analytics and reports are computed from stored records,
+- role-based access checks are tied to persisted permission data.
+
+## Future Scope
+
+Planned next step:
+
+- offline scheduling support.
+
+That would allow trip planning and dispatch preparation even when the device is temporarily disconnected, then sync changes back once connectivity returns. A good future implementation would likely include local queueing, conflict resolution, and a clear sync status view.
 
 ## Getting Started
 
 ### Prerequisites
 
-- **Python 3.10+**
-- **Node.js 18+** and npm
-- *(Optional)* Docker & Docker Compose
+- Python 3.10+
+- Node.js 18+ and npm
+- Optional: Docker and Docker Compose
 
-### Option 1: Run Locally
+### Run Locally
 
 #### 1. Clone the repository
 
@@ -124,8 +114,9 @@ pip install -r requirements.txt
 python -m backend.main
 ```
 
-The API will be available at **http://localhost:8000**  
-Interactive API docs: **http://localhost:8000/docs**
+The API will be available at `http://localhost:8000`
+
+Interactive docs will be available at `http://localhost:8000/docs`
 
 #### 3. Start the frontend
 
@@ -135,28 +126,28 @@ npm install
 npm run dev
 ```
 
-The UI will be available at **http://localhost:5173**
+The UI will be available at `http://localhost:5173`
 
-### Option 2: Run with Docker Compose
+### Run With Docker Compose
 
 ```bash
 docker-compose up --build
 ```
 
-| Service  | URL |
-|----------|-----|
+| Service | URL |
+|---|---|
 | Frontend | http://localhost:5173 |
-| Backend  | http://localhost:8000 |
+| Backend | http://localhost:8000 |
 | API Docs | http://localhost:8000/docs |
-
----
 
 ## Demo Credentials
 
-The database is automatically seeded on first startup with demo users. All accounts use the password **`password123`**.
+The database is seeded on first startup with demo users for development and review.
+
+All demo accounts use the password `password123`.
 
 | Role | Email |
-|------|-------|
+|---|---|
 | Admin | admin@fleetpulse.com |
 | Fleet Manager | manager@fleetpulse.com |
 | Dispatcher | dispatcher@fleetpulse.com |
@@ -164,73 +155,75 @@ The database is automatically seeded on first startup with demo users. All accou
 | Finance Analyst | finance@fleetpulse.com |
 | Driver | driver@fleetpulse.com |
 
-Use the **Active Persona** dropdown in the header to instantly switch between roles without re-logging in.
-
----
-
 ## API Reference
 
-All endpoints are prefixed with `/api/v1` and require a Bearer token (except auth routes).
+All endpoints are prefixed with `/api/v1`.
 
 ### Authentication
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+|---|---|---|
 | POST | `/auth/signup` | Register a new user |
-| POST | `/auth/login` | Login and receive JWT token |
+| POST | `/auth/login` | Login and receive a JWT token |
 | POST | `/auth/token` | OAuth2 token endpoint |
+
+### Users and Settings
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/users` | Admin-only user directory |
+| GET | `/settings/permissions` | Fetch permission matrix |
+| PUT | `/settings/permissions` | Update permission matrix |
 
 ### Vehicles
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+|---|---|---|
 | GET | `/vehicles` | List all vehicles |
 | POST | `/vehicles` | Create a vehicle |
 | PATCH | `/vehicles/{id}` | Update a vehicle |
-| GET | `/vehicles/{id}/history` | Trip, service, and fuel history |
+| GET | `/vehicles/{id}/history` | Vehicle history, trips, service, and fuel |
 
 ### Drivers
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+|---|---|---|
 | GET | `/drivers` | List drivers with safety scores |
 | POST | `/drivers` | Create a driver |
 
-### Trips & Dispatch
+### Trips and Dispatch
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
+|---|---|---|
 | GET | `/trips` | List all trips |
 | POST | `/trips` | Create a trip |
-| POST | `/trips/{id}/assign` | Manually assign vehicle & driver |
+| POST | `/trips/{id}/assign` | Manually assign vehicle and driver |
 | POST | `/trips/{id}/auto-assign` | Auto-assign best available resources |
 | POST | `/trips/{id}/start` | Mark trip as in transit |
 | POST | `/trips/{id}/delay` | Mark trip as delayed |
-| POST | `/trips/{id}/complete` | Complete trip and update odometer |
+| POST | `/trips/{id}/complete` | Complete a trip and update odometer |
 | POST | `/trips/{id}/cancel` | Cancel a trip |
 
-### Maintenance & Fuel
+### Maintenance and Fuel
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/maintenance/upcoming` | Upcoming/overdue maintenance alerts |
+|---|---|---|
+| GET | `/maintenance/upcoming` | Upcoming and overdue maintenance alerts |
 | POST | `/maintenance/log` | Log a service entry |
-| GET | `/fuel` | List fuel log entries |
+| GET | `/fuel` | List fuel logs |
 | POST | `/fuel/log` | Log a fuel entry |
-| GET | `/fuel/anomalies` | Detected fuel consumption anomalies |
+| GET | `/fuel/anomalies` | Fuel anomaly detection results |
 
 ### Analytics
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/analytics/dashboard` | Dashboard KPIs and metrics |
-| GET | `/analytics/reports` | Detailed operational reports |
-
----
+|---|---|---|
+| GET | `/analytics/dashboard` | Dashboard KPIs and alert summaries |
+| GET | `/analytics/reports` | Operational reporting aggregates |
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and adjust as needed:
+Copy `.env.example` to `.env` and adjust as needed.
 
 ```env
 # Backend
@@ -241,9 +234,7 @@ SECRET_KEY=your-secret-key-here
 VITE_API_URL=http://localhost:8000
 ```
 
-> **Note:** Change `SECRET_KEY` before deploying to production.
-
----
+Important: change `SECRET_KEY` before deploying to production.
 
 ## Running Tests
 
@@ -252,27 +243,45 @@ cd backend
 python test_all_features.py
 ```
 
-This runs integration tests covering authentication, CRUD operations, dispatch logic, maintenance predictions, fuel anomaly detection, and analytics.
-
----
+This test suite covers authentication, CRUD operations, dispatch logic, maintenance predictions, fuel anomaly detection, and analytics.
 
 ## Screenshots
 
-The FleetPulse UI features a dark-themed **Live Ops Center** with:
+FleetPulse uses a dark-themed Live Ops Center layout with:
 
-- Sidebar navigation across all fleet modules
-- Real-time dashboard with charts and KPI cards
-- Persona switcher for instant RBAC demo
-- Compliance and maintenance alert badges
-
----
+- a persistent sidebar for fleet modules,
+- KPI cards and operational charts,
+- tables and forms for live fleet data,
+- admin-only settings for permission management,
+- read-only state where role access does not permit edits.
 
 ## License
 
 This project is open source. Feel free to use, modify, and distribute.
 
----
-
 ## Author
 
 **[JEETB03](https://github.com/JEETB03)**
+
+## Tech Stack
+
+### Backend
+- FastAPI
+- SQLModel
+- SQLite
+- JWT authentication
+- bcrypt password hashing
+- Uvicorn
+
+### Frontend
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- React Router v6
+- Recharts
+- Lucide React
+
+### DevOps
+- Docker
+- Docker Compose
