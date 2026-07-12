@@ -30,19 +30,19 @@ export const PageHeader: React.FC<{
 );
 
 const STATUS_STYLES: Record<string, string> = {
-  Active: 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40',
-  'On Trip': 'bg-blue-950/60 text-blue-400 border border-blue-800/40',
-  Idle: 'bg-neutral-800 text-neutral-300 border border-neutral-700/40',
-  'In Shop': 'bg-amber-950/60 text-amber-400 border border-amber-800/40',
-  Retired: 'bg-red-950/60 text-red-400 border border-red-800/40',
-  Assigned: 'bg-neutral-800 text-neutral-300 border border-neutral-700/40',
-  'In Transit': 'bg-blue-950/60 text-blue-400 border border-blue-800/40',
-  Delayed: 'bg-amber-950/60 text-amber-400 border border-amber-800/40',
-  Completed: 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40',
-  Cancelled: 'bg-red-950/60 text-red-400 border border-red-800/40',
-  Excellent: 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40',
-  Good: 'bg-blue-950/60 text-blue-400 border border-blue-800/40',
-  Warning: 'bg-amber-950/60 text-amber-400 border border-amber-800/40',
+  Active: 'bg-emerald-950/60 text-white border border-emerald-800/40',
+  'On Trip': 'bg-blue-950/60 text-white border border-blue-800/40',
+  Idle: 'bg-neutral-800 text-white border border-neutral-700/40',
+  'In Shop': 'bg-amber-950/60 text-white border border-amber-800/40',
+  Retired: 'bg-red-950/60 text-white border border-red-800/40',
+  Assigned: 'bg-neutral-800 text-white border border-neutral-700/40',
+  'In Transit': 'bg-blue-950/60 text-white border border-blue-800/40',
+  Delayed: 'bg-amber-950/60 text-white border border-amber-800/40',
+  Completed: 'bg-emerald-950/60 text-white border border-emerald-800/40',
+  Cancelled: 'bg-red-950/60 text-white border border-red-800/40',
+  Excellent: 'bg-emerald-950/60 text-white border border-emerald-800/40',
+  Good: 'bg-blue-950/60 text-white border border-blue-800/40',
+  Warning: 'bg-amber-950/60 text-white border border-amber-800/40',
 };
 
 export const StatusBadge: React.FC<{ status: string; className?: string }> = ({ status, className = '' }) => (

@@ -103,7 +103,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 className="flex flex-col items-start p-4 bg-neutral-900/60 border border-neutral-800 hover:border-brand-500/40 rounded-xl text-left hover:bg-neutral-800/40 transition card-transition group"
               >
                 <div className="flex items-center justify-between w-full mb-1">
-                  <span className="font-semibold text-brand-400 group-hover:text-brand-300 transition text-sm flex items-center gap-1.5">
+                  <span className="font-semibold text-white group-hover:text-white transition text-sm flex items-center gap-1.5">
                     <UserCheck className="w-4 h-4" /> {p.role}
                   </span>
                   <span className="text-[10px] text-neutral-500 group-hover:text-neutral-400 transition bg-neutral-800 px-2 py-0.5 rounded-full border border-neutral-800">
@@ -187,7 +187,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-neutral-200 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
                 >
                   <option value="Admin">Admin</option>
                   <option value="Fleet Manager">Fleet Manager</option>

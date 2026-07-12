@@ -104,37 +104,37 @@ export const Settings: React.FC = () => {
                   
                   {/* Admin cell */}
                   <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold ${row.admin === 'Write' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : 'bg-neutral-800 text-neutral-400'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.admin === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : 'bg-neutral-800'}`}>
                       {row.admin}
                     </span>
                   </td>
                   {/* Fleet manager cell */}
                   <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold ${row.manager === 'Write' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : row.manager === 'Read' ? 'bg-neutral-850 text-neutral-400' : 'bg-red-950/40 text-red-400 border border-red-900/30'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.manager === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : row.manager === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40 border border-red-900/30'}`}>
                       {row.manager}
                     </span>
                   </td>
                   {/* Dispatcher cell */}
                   <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold ${row.dispatcher === 'Write' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : row.dispatcher === 'Read' ? 'bg-neutral-850 text-neutral-400' : 'bg-red-950/40 text-red-400 border border-red-900/30'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.dispatcher === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : row.dispatcher === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40 border border-red-900/30'}`}>
                       {row.dispatcher}
                     </span>
                   </td>
                   {/* Safety cell */}
                   <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold ${row.safety === 'Write' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : row.safety === 'Read' ? 'bg-neutral-850 text-neutral-400' : 'bg-red-950/40 text-red-400 border border-red-900/30'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.safety === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : row.safety === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40 border border-red-900/30'}`}>
                       {row.safety}
                     </span>
                   </td>
                   {/* Finance cell */}
                   <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold ${row.finance === 'Write' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : row.finance === 'Read' ? 'bg-neutral-850 text-neutral-400' : 'bg-red-950/40 text-red-400 border border-red-900/30'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.finance === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : row.finance === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40 border border-red-900/30'}`}>
                       {row.finance}
                     </span>
                   </td>
                   {/* Driver cell */}
                   <td className="p-3 text-center">
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold ${row.driver === 'Write' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' : row.driver === 'Read' ? 'bg-neutral-850 text-neutral-400' : 'bg-red-950/40 text-red-400 border border-red-900/30'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-semibold text-white ${row.driver === 'Write' ? 'bg-emerald-950/60 border border-emerald-800/40' : row.driver === 'Read' ? 'bg-neutral-850' : 'bg-red-950/40 border border-red-900/30'}`}>
                       {row.driver}
                     </span>
                   </td>
@@ -168,7 +168,7 @@ export const Settings: React.FC = () => {
                   <td className="p-3 font-medium text-neutral-200">{u.name}</td>
                   <td className="p-3 text-neutral-400">{u.email}</td>
                   <td className="p-3">
-                    <span className="bg-neutral-900 text-neutral-300 border border-neutral-800 px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 w-fit">
+                    <span className="bg-neutral-900 text-white border border-neutral-800 px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 w-fit">
                       <UserCheck className="w-3.5 h-3.5 text-brand-500" /> {u.role}
                     </span>
                   </td>

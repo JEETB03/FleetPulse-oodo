@@ -6,6 +6,17 @@
   body {
     @apply bg-background text-neutral-100;
   }
+
+  input,
+  textarea {
+    color: #000 !important;
+    caret-color: #000;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #6b7280;
+  }
 }
 
 /* Custom Scrollbars */

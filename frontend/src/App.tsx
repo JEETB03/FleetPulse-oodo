@@ -194,10 +194,10 @@ export const AppContent: React.FC = () => {
                 value={user.role}
                 onChange={(e) => handlePersonaChange(e.target.value)}
                 disabled={swappingPersona}
-                className="bg-transparent text-[11px] font-bold text-brand-400 focus:outline-none cursor-pointer max-w-[120px] lg:max-w-none"
+                className="bg-transparent text-[11px] font-bold text-white focus:outline-none cursor-pointer max-w-[120px] lg:max-w-none"
               >
                 {ROLES.map((r) => (
-                  <option key={r.role} value={r.role} className="bg-neutral-900 text-neutral-200">{r.role}</option>
+                  <option key={r.role} value={r.role} className="bg-neutral-900 text-white">{r.role}</option>
                 ))}
               </select>
             </div> */}
@@ -207,7 +207,7 @@ export const AppContent: React.FC = () => {
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-500" />
             </button>
 
-            <span className="bg-neutral-900 text-neutral-300 border border-neutral-850 px-2 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase hidden md:flex items-center gap-1">
+            <span className="bg-neutral-900 text-white border border-neutral-850 px-2 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase hidden md:flex items-center gap-1">
               <UserCheck className="w-3.5 h-3.5 text-brand-500" /> {user.role}
             </span>
           </div>
