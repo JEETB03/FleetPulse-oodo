@@ -15,7 +15,24 @@ import {
   ShieldAlert, 
   X, 
   Sparkles,
+  Sun,
+  Cloud,
+  CloudRain,
+  CloudLightning,
+  Wind,
+  CloudFog
 } from 'lucide-react';
+
+const getWeatherIcon = (condition: string) => {
+  const cond = condition.toLowerCase();
+  if (cond.includes('sunny')) return <Sun className="w-4 h-4 text-amber-405" />;
+  if (cond.includes('cloud')) return <Cloud className="w-4 h-4 text-neutral-400" />;
+  if (cond.includes('storm')) return <CloudLightning className="w-4 h-4 text-purple-400 animate-pulse" />;
+  if (cond.includes('rain')) return <CloudRain className="w-4 h-4 text-blue-400" />;
+  if (cond.includes('wind')) return <Wind className="w-4 h-4 text-teal-400" />;
+  if (cond.includes('fog')) return <CloudFog className="w-4 h-4 text-neutral-300" />;
+  return <Cloud className="w-4 h-4 text-neutral-400" />;
+};
 
 interface Trip {
   id: string;
@@ -66,6 +83,16 @@ export const Trips: React.FC = () => {
   const [distanceKm, setDistanceKm] = useState(150);
   const [completeLoading, setCompleteLoading] = useState(false);
 
+  // Weather states
+  const [weatherPreview, setWeatherPreview] = useState<any | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherError, setWeatherError] = useState('');
+
+  const [selectedWeatherTrip, setSelectedWeatherTrip] = useState<Trip | null>(null);
+  const [tripWeatherDetails, setTripWeatherDetails] = useState<any | null>(null);
+  const [tripWeatherLoading, setTripWeatherLoading] = useState(false);
+  const [tripWeatherError, setTripWeatherError] = useState('');
+
   const vehicleMap = useMemo(() => Object.fromEntries(vehicles.map(v => [v.id, v])), [vehicles]);
   const driverMap = useMemo(() => Object.fromEntries(drivers.map(d => [d.id, d])), [drivers]);
 
@@ -75,6 +102,49 @@ export const Trips: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!origin || !destination || !scheduledStart) {
+      setWeatherPreview(null);
+      setWeatherError('');
+      return;
+    }
+
+    const handler = setTimeout(async () => {
+      setWeatherLoading(true);
+      setWeatherError('');
+      try {
+        const data = await api.get<any>(
+          `/weather?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&scheduled_date=${encodeURIComponent(scheduledStart)}`
+        );
+        setWeatherPreview(data);
+      } catch (err: any) {
+        setWeatherError(err.message || 'Failed to fetch weather forecast');
+        setWeatherPreview(null);
+      } finally {
+        setWeatherLoading(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(handler);
+  }, [origin, destination, scheduledStart]);
+
+  const handleOpenWeatherModal = async (trip: Trip) => {
+    setSelectedWeatherTrip(trip);
+    setTripWeatherDetails(null);
+    setTripWeatherError('');
+    setTripWeatherLoading(true);
+    try {
+      const data = await api.get<any>(
+        `/weather?origin=${encodeURIComponent(trip.origin)}&destination=${encodeURIComponent(trip.destination)}&scheduled_date=${encodeURIComponent(trip.scheduled_start)}`
+      );
+      setTripWeatherDetails(data);
+    } catch (err: any) {
+      setTripWeatherError(err.message || 'Failed to fetch weather details.');
+    } finally {
+      setTripWeatherLoading(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -256,7 +326,20 @@ export const Trips: React.FC = () => {
                 <div key={trip.id} className="glass p-4 rounded-xl border border-neutral-800 space-y-3 hover:border-neutral-700 transition">
                   <div className="flex justify-between items-start">
                     <span className="font-mono text-[10px] text-brand-400 font-bold">{trip.id}</span>
-                    <span className="text-[9px] bg-neutral-800 text-white px-1.5 py-0.5 rounded border border-neutral-800">Pending</span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenWeatherModal(trip);
+                        }}
+                        className="bg-neutral-950 hover:bg-neutral-900/60 p-1.5 rounded-lg border border-neutral-800/80 text-neutral-400 hover:text-brand-400 transition"
+                        title="View Weather Forecast"
+                      >
+                        <Cloud className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="text-[9px] bg-neutral-800 text-white px-1.5 py-0.5 rounded border border-neutral-800">Pending</span>
+                    </div>
                   </div>
                   
                   <div className="space-y-1">
@@ -314,11 +397,24 @@ export const Trips: React.FC = () => {
                 <div key={trip.id} className="glass p-4 rounded-xl border border-neutral-800 space-y-3 hover:border-neutral-700 transition">
                   <div className="flex justify-between items-start">
                     <span className="font-mono text-[10px] text-brand-400 font-bold">{trip.id}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded border text-white ${
-                      trip.status === 'Delayed' ? 'bg-amber-950/60 border-amber-800/40' : 'bg-blue-950/60 border-blue-800/40'
-                    }`}>
-                      {trip.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenWeatherModal(trip);
+                        }}
+                        className="bg-neutral-950 hover:bg-neutral-900/60 p-1.5 rounded-lg border border-neutral-800/80 text-neutral-400 hover:text-brand-400 transition"
+                        title="View Weather Forecast"
+                      >
+                        <Cloud className="w-3.5 h-3.5" />
+                      </button>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded border text-white ${
+                        trip.status === 'Delayed' ? 'bg-amber-950/60 border-amber-800/40' : 'bg-blue-950/60 border-blue-800/40'
+                      }`}>
+                        {trip.status}
+                      </span>
+                    </div>
                   </div>
                   
                   <div className="space-y-1">
@@ -545,6 +641,60 @@ export const Trips: React.FC = () => {
                 />
               </div>
 
+              {/* Weather Forecast Preview */}
+              {(origin || destination || scheduledStart) && (
+                <div className="bg-neutral-950/60 border border-neutral-900 rounded-xl p-4 space-y-3">
+                  <span className="text-[10px] font-bold text-neutral-350 uppercase tracking-wider flex items-center gap-1">
+                    🌦️ Weather Route Outlook
+                  </span>
+                  {weatherLoading ? (
+                    <p className="text-[10px] text-neutral-500 animate-pulse">Fetching en-route meteorological data...</p>
+                  ) : weatherError ? (
+                    <p className="text-[10px] text-red-400">⚠️ {weatherError}</p>
+                  ) : weatherPreview ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-neutral-900/50 p-2.5 rounded-lg border border-neutral-800/80 text-center">
+                          <span className="text-[9px] text-neutral-500 block uppercase font-semibold">Origin Weather</span>
+                          <span className="font-semibold text-neutral-200 block text-[11px] mt-1 truncate">{weatherPreview.origin.city}</span>
+                          <div className="flex items-center justify-center gap-1.5 mt-1">
+                            {getWeatherIcon(weatherPreview.origin.condition)}
+                            <span className="font-mono text-xs font-bold text-neutral-100">{weatherPreview.origin.temperature}°C</span>
+                          </div>
+                          <span className="text-[9px] text-neutral-400 block mt-1">{weatherPreview.origin.condition}</span>
+                        </div>
+                        <div className="bg-neutral-900/50 p-2.5 rounded-lg border border-neutral-800/80 text-center">
+                          <span className="text-[9px] text-neutral-500 block uppercase font-semibold">Dest Weather</span>
+                          <span className="font-semibold text-neutral-200 block text-[11px] mt-1 truncate">{weatherPreview.destination.city}</span>
+                          <div className="flex items-center justify-center gap-1.5 mt-1">
+                            {getWeatherIcon(weatherPreview.destination.condition)}
+                            <span className="font-mono text-xs font-bold text-neutral-100">{weatherPreview.destination.temperature}°C</span>
+                          </div>
+                          <span className="text-[9px] text-neutral-400 block mt-1">{weatherPreview.destination.condition}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Route hazard level warning */}
+                      <div className={`p-2.5 rounded-lg text-[10px] leading-relaxed border ${
+                        weatherPreview.route_hazard_level === 'High' 
+                          ? 'bg-red-950/40 border-red-800/60 text-red-200' 
+                          : weatherPreview.route_hazard_level === 'Medium'
+                          ? 'bg-amber-950/40 border-amber-800/60 text-amber-200'
+                          : 'bg-emerald-950/20 border-emerald-900/40 text-emerald-300'
+                      }`}>
+                        <div className="font-bold uppercase tracking-wider flex items-center gap-1">
+                          {weatherPreview.route_hazard_level === 'High' && <span>🚨 Critical Risk</span>}
+                          {weatherPreview.route_hazard_level === 'Medium' && <span>⚠️ Moderate Risk</span>}
+                          {weatherPreview.route_hazard_level === 'Low' && <span>✅ Optimal Route</span>}
+                          <span>• {weatherPreview.route_hazard_level} Hazard Level</span>
+                        </div>
+                        <div className="mt-1 font-medium">{weatherPreview.recommendations[0]}</div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
               {/* Assignment Controls */}
               <div className="bg-neutral-950/60 p-4 border border-neutral-900 rounded-xl space-y-3">
                 <div className="flex items-center justify-between mb-2">
@@ -609,6 +759,94 @@ export const Trips: React.FC = () => {
                 {addLoading ? 'Dispatching...' : 'Dispatch Fleet'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Trip Weather Details Modal */}
+      {selectedWeatherTrip && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass w-full max-w-md rounded-2xl border border-neutral-800 p-6">
+            <div className="flex justify-between items-start pb-3 border-b border-neutral-800 mb-4">
+              <div>
+                <span className="text-[10px] text-neutral-500 font-mono font-bold uppercase tracking-wider">Meteorological Intel</span>
+                <h2 className="text-sm font-bold text-neutral-100 uppercase mt-0.5">Weather Outlook en Route</h2>
+              </div>
+              <button 
+                onClick={() => setSelectedWeatherTrip(null)}
+                className="bg-neutral-900 hover:bg-neutral-800 p-1.5 rounded-lg border border-neutral-800 text-neutral-400 hover:text-neutral-200 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {tripWeatherLoading ? (
+              <div className="py-8 flex flex-col items-center justify-center gap-2">
+                <div className="w-6 h-6 border-2 border-t-brand-500 border-neutral-800 rounded-full animate-spin" />
+                <p className="text-[10px] text-neutral-500 animate-pulse">Syncing satellite telemetry forecast...</p>
+              </div>
+            ) : tripWeatherError ? (
+              <div className="text-xs bg-red-950 border border-red-800 text-red-200 p-3 rounded-lg">
+                {tripWeatherError}
+              </div>
+            ) : tripWeatherDetails ? (
+              <div className="space-y-4 text-xs">
+                <div className="flex items-center justify-between bg-neutral-950/40 p-3 border border-neutral-900 rounded-xl">
+                  <div>
+                    <span className="text-neutral-500 text-[10px] block uppercase font-mono">Trip ID</span>
+                    <span className="font-mono text-brand-400 font-bold">{selectedWeatherTrip.id}</span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-550 text-[10px] block uppercase font-mono text-right">Route</span>
+                    <span className="font-semibold text-neutral-200">{selectedWeatherTrip.origin} → {selectedWeatherTrip.destination}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-neutral-900/60 p-3 rounded-xl border border-neutral-850 relative overflow-hidden">
+                    <span className="text-[9px] text-neutral-400 font-semibold uppercase tracking-wider block">Origin Weather</span>
+                    <span className="text-xs font-bold text-neutral-100 mt-1 block truncate">{tripWeatherDetails.origin.city}</span>
+                    <div className="flex items-center gap-2 mt-2">
+                      {getWeatherIcon(tripWeatherDetails.origin.condition)}
+                      <span className="font-mono text-base font-extrabold text-neutral-200">{tripWeatherDetails.origin.temperature}°C</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-550 block mt-2">{tripWeatherDetails.origin.condition}</span>
+                    <p className="text-[9px] text-neutral-400 mt-2 border-t border-neutral-800/80 pt-2 leading-relaxed italic">{tripWeatherDetails.origin.advisory}</p>
+                  </div>
+
+                  <div className="bg-neutral-900/60 p-3 rounded-xl border border-neutral-850 relative overflow-hidden">
+                    <span className="text-[9px] text-neutral-400 font-semibold uppercase tracking-wider block">Destination Weather</span>
+                    <span className="text-sm font-bold text-neutral-100 mt-1 block truncate">{tripWeatherDetails.destination.city}</span>
+                    <div className="flex items-center gap-2 mt-2">
+                      {getWeatherIcon(tripWeatherDetails.destination.condition)}
+                      <span className="font-mono text-base font-extrabold text-neutral-200">{tripWeatherDetails.destination.temperature}°C</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-550 block mt-2">{tripWeatherDetails.destination.condition}</span>
+                    <p className="text-[9px] text-neutral-400 mt-2 border-t border-neutral-800/80 pt-2 leading-relaxed italic">{tripWeatherDetails.destination.advisory}</p>
+                  </div>
+                </div>
+
+                <div className={`p-3 rounded-xl border ${
+                  tripWeatherDetails.route_hazard_level === 'High'
+                    ? 'bg-red-950/30 border-red-800/60 text-red-200'
+                    : tripWeatherDetails.route_hazard_level === 'Medium'
+                    ? 'bg-amber-950/20 border-amber-800/60 text-amber-200'
+                    : 'bg-emerald-950/10 border-emerald-900/30 text-emerald-300'
+                }`}>
+                  <div className="font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    {tripWeatherDetails.route_hazard_level === 'High' ? '🔴' : tripWeatherDetails.route_hazard_level === 'Medium' ? '🟡' : '🟢'}
+                    <span>Route Risk Outlook: {tripWeatherDetails.route_hazard_level}</span>
+                  </div>
+                  <p className="mt-1 text-[10px] leading-relaxed font-medium">{tripWeatherDetails.recommendations[0]}</p>
+                </div>
+
+                <button
+                  onClick={() => setSelectedWeatherTrip(null)}
+                  className="w-full bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-850 font-semibold rounded-lg py-2 transition text-xs"
+                >
+                  Close Intel
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       )}

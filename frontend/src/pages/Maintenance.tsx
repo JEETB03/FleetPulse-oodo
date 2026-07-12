@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, API_URL } from '../api';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { 
   Plus, 
@@ -8,6 +8,7 @@ import {
   Lock,
   ArrowRight
 } from 'lucide-react';
+import { useToast } from '../hooks/useToast';
 
 interface UpcomingService {
   vehicle_id: string;
@@ -28,6 +29,7 @@ interface Vehicle {
 }
 
 export const Maintenance: React.FC = () => {
+  const toast = useToast();
   const [upcoming, setUpcoming] = useState<UpcomingService[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,7 @@ export const Maintenance: React.FC = () => {
   const [description, setDescription] = useState('');
   const [cost, setCost] = useState(0);
   const [odometerKm, setOdometerKm] = useState(0);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState('');
   const { canWriteMaintenance } = useCurrentUser();
@@ -63,24 +66,58 @@ export const Maintenance: React.FC = () => {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setReceiptFile(e.target.files[0]);
+    }
+  };
+
   const handleLogService = async (e: React.FormEvent) => {
     e.preventDefault();
     setLogError('');
     setLogLoading(true);
     try {
+      let uploadedReceiptUrl = null;
+
+      if (receiptFile) {
+        const formData = new FormData();
+        formData.append('file', receiptFile);
+
+        const token = localStorage.getItem('fleetpulse_token');
+        const response = await fetch(`${API_URL}/api/v1/expenses/upload`, {
+          method: 'POST',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => ({}));
+          throw new Error(errBody.detail || 'Receipt file upload failed.');
+        }
+
+        const uploadResult = await response.json();
+        uploadedReceiptUrl = uploadResult.receipt_url;
+      }
+
       await api.post('/maintenance/log', {
         vehicle_id: selectedVehicleId,
         date: serviceDate,
         description,
         cost,
-        odometer_km: odometerKm
+        odometer_km: odometerKm,
+        receipt_url: uploadedReceiptUrl
       });
+
+      toast('Maintenance log record submitted successfully', 'success');
       setShowLogModal(false);
       // Reset form
       setSelectedVehicleId('');
       setDescription('');
       setCost(0);
       setOdometerKm(0);
+      setReceiptFile(null);
       fetchData();
     } catch (err: any) {
       setLogError(err.message || 'Failed to log service record');
@@ -249,6 +286,7 @@ export const Maintenance: React.FC = () => {
                 onClick={() => {
                   setShowLogModal(false);
                   setLogError('');
+                  setReceiptFile(null);
                 }}
                 className="bg-neutral-900 hover:bg-neutral-800 p-1.5 rounded-lg border border-neutral-800 text-neutral-400 hover:text-neutral-200 transition"
               >
@@ -328,6 +366,16 @@ export const Maintenance: React.FC = () => {
                     className="w-full bg-neutral-905 border border-neutral-800 rounded-lg p-2.5 text-neutral-200 focus:outline-none focus:border-brand-500 transition"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Upload Service Receipt (Optional)</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleFileChange}
+                  className="w-full text-neutral-300 text-xs bg-neutral-905 border border-neutral-800 rounded-lg p-2 focus:outline-none focus:border-brand-500 transition file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-neutral-850 file:text-white hover:file:bg-neutral-750 file:cursor-pointer"
+                />
               </div>
 
               <button

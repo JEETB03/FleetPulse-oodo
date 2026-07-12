@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, API_URL } from '../api';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { 
   Plus, 
@@ -345,6 +345,16 @@ export const Vehicles: React.FC = () => {
                               <div>
                                 <span className="text-neutral-300 font-semibold">{fl.liters} Liters</span>
                                 <span className="text-[10px] text-neutral-500 block">{new Date(fl.date).toLocaleDateString()}</span>
+                                {fl.receipt_url && (
+                                  <a 
+                                    href={`${API_URL}${fl.receipt_url}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-[9px] text-brand-400 hover:text-brand-300 font-semibold underline mt-1 inline-flex items-center gap-0.5"
+                                  >
+                                    View Receipt
+                                  </a>
+                                )}
                               </div>
                               <div className="text-right">
                                 <span className="text-neutral-300 font-mono">₹{fl.cost}</span>
@@ -373,6 +383,18 @@ export const Vehicles: React.FC = () => {
                                 <span>Odometer: {sl.odometer_km} km</span>
                                 <span>{new Date(sl.date).toLocaleDateString()}</span>
                               </div>
+                              {sl.receipt_url && (
+                                <div className="mt-1.5 pt-1.5 border-t border-neutral-900/60">
+                                  <a 
+                                    href={`${API_URL}${sl.receipt_url}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-[9px] text-brand-400 hover:text-brand-300 font-semibold underline inline-flex items-center gap-0.5 font-mono"
+                                  >
+                                    View Receipt
+                                  </a>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

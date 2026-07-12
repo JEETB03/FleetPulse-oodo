@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, API_URL } from '../api';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { 
   Plus, 
@@ -8,8 +8,10 @@ import {
   TrendingUp, 
   Calendar, 
   X,
-  Lock
+  Lock,
+  FileText
 } from 'lucide-react';
+import { useToast } from '../hooks/useToast';
 
 interface FuelLog {
   id: string;
@@ -18,6 +20,7 @@ interface FuelLog {
   odometer_km: number;
   liters: number;
   cost: number;
+  receipt_url?: string | null;
 }
 
 interface FuelAnomaly {
@@ -37,6 +40,7 @@ interface Vehicle {
 }
 
 export const FuelExpense: React.FC = () => {
+  const toast = useToast();
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
   const [anomalies, setAnomalies] = useState<FuelAnomaly[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -51,6 +55,7 @@ export const FuelExpense: React.FC = () => {
   const [liters, setLiters] = useState(0);
   const [cost, setCost] = useState(0);
   const [odometerKm, setOdometerKm] = useState(0);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState('');
   const { canWriteFuel } = useCurrentUser();
@@ -80,23 +85,57 @@ export const FuelExpense: React.FC = () => {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setReceiptFile(e.target.files[0]);
+    }
+  };
+
   const handleLogFuel = async (e: React.FormEvent) => {
     e.preventDefault();
     setLogError('');
     setLogLoading(true);
     try {
+      let uploadedReceiptUrl = null;
+
+      if (receiptFile) {
+        const formData = new FormData();
+        formData.append('file', receiptFile);
+        
+        const token = localStorage.getItem('fleetpulse_token');
+        const response = await fetch(`${API_URL}/api/v1/expenses/upload`, {
+          method: 'POST',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => ({}));
+          throw new Error(errBody.detail || 'Receipt file upload failed.');
+        }
+
+        const uploadResult = await response.json();
+        uploadedReceiptUrl = uploadResult.receipt_url;
+      }
+
       await api.post('/fuel/log', {
         vehicle_id: selectedVehicleId,
         date: logDate,
         odometer_km: odometerKm,
         liters,
-        cost
+        cost,
+        receipt_url: uploadedReceiptUrl
       });
+
+      toast('Fuel fill-up transaction logged successfully', 'success');
       setShowLogModal(false);
       setSelectedVehicleId('');
       setLiters(0);
       setCost(0);
       setOdometerKm(0);
+      setReceiptFile(null);
       fetchData();
     } catch (err: any) {
       setLogError(err.message || 'Failed to submit fuel transaction');
@@ -205,16 +244,17 @@ export const FuelExpense: React.FC = () => {
                 <th className="p-4">Quantity (Liters)</th>
                 <th className="p-4">Total Cost</th>
                 <th className="p-4">Price / L</th>
+                <th className="p-4">Receipt</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-900">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-neutral-500">Syncing expense database...</td>
+                  <td colSpan={7} className="p-8 text-center text-neutral-500">Syncing expense database...</td>
                 </tr>
               ) : fuelLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-neutral-500">No fuel records registered.</td>
+                  <td colSpan={7} className="p-8 text-center text-neutral-500">No fuel records registered.</td>
                 </tr>
               ) : (
                 fuelLogs.map((log) => {
@@ -237,6 +277,20 @@ export const FuelExpense: React.FC = () => {
                       <td className="p-4 font-mono font-semibold text-neutral-200">{log.liters} L</td>
                       <td className="p-4 font-mono text-brand-400 font-bold">₹{log.cost.toLocaleString()}</td>
                       <td className="p-4 font-mono text-neutral-400">₹{(log.cost / log.liters).toFixed(2)}</td>
+                      <td className="p-4">
+                        {log.receipt_url ? (
+                          <a 
+                            href={`${API_URL}${log.receipt_url}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-brand-400 hover:text-brand-300 font-semibold bg-neutral-950 border border-neutral-800 px-2 py-1.5 rounded hover:underline inline-flex items-center gap-1"
+                          >
+                            <FileText className="w-3.5 h-3.5" /> View
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-neutral-600">None</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })
@@ -256,6 +310,7 @@ export const FuelExpense: React.FC = () => {
                 onClick={() => {
                   setShowLogModal(false);
                   setLogError('');
+                  setReceiptFile(null);
                 }}
                 className="bg-neutral-900 hover:bg-neutral-800 p-1.5 rounded-lg border border-neutral-800 text-neutral-400 hover:text-neutral-200 transition"
               >
@@ -335,6 +390,16 @@ export const FuelExpense: React.FC = () => {
                   value={cost}
                   onChange={(e) => setCost(parseInt(e.target.value) || 0)}
                   className="w-full bg-neutral-905 border border-neutral-800 rounded-lg p-2.5 text-neutral-200 focus:outline-none focus:border-brand-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">Upload Expense Receipt (Optional)</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleFileChange}
+                  className="w-full text-neutral-300 text-xs bg-neutral-905 border border-neutral-800 rounded-lg p-2 focus:outline-none focus:border-brand-500 transition file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-neutral-850 file:text-white hover:file:bg-neutral-750 file:cursor-pointer"
                 />
               </div>
 

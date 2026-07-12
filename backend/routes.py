@@ -1,8 +1,10 @@
+import os
+import shutil
 import uuid
 from datetime import datetime, date
 from statistics import mean
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
@@ -84,12 +86,18 @@ class AssignPayload(BaseModel):
 class CompletePayload(BaseModel):
     distance_km: float
 
+class DriverSelfCreate(BaseModel):
+    name: str
+    license_no: str
+    license_expiry: date
+
 class FuelLogCreate(BaseModel):
     vehicle_id: str
     date: date
     odometer_km: float
     liters: float
     cost: float
+    receipt_url: Optional[str] = None
 
 class ServiceLogCreate(BaseModel):
     vehicle_id: str
@@ -97,6 +105,7 @@ class ServiceLogCreate(BaseModel):
     description: str
     cost: float
     odometer_km: float
+    receipt_url: Optional[str] = None
 
 class PermissionMatrixItem(BaseModel):
     module: str
@@ -328,9 +337,79 @@ def get_vehicle_history(
         "trips": trips
     }
 
-# ---------------------------------------------------------------------------
-# Driver Routes
-# ---------------------------------------------------------------------------
+@router.get("/drivers/me")
+def get_driver_me(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    driver = session.exec(select(Driver).where(Driver.linked_user_id == current_user.id)).first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver profile not found")
+    score = SafetyScoreEngine.score(driver)
+    return {
+        "id": driver.id,
+        "name": driver.name,
+        "license_no": driver.license_no,
+        "license_expiry": driver.license_expiry,
+        "violations": driver.violations,
+        "trips_completed": driver.trips_completed,
+        "hours_driven_7d": driver.hours_driven_7d,
+        "last_trip_end": driver.last_trip_end,
+        "linked_user_id": driver.linked_user_id,
+        "safety_score": score,
+        "safety_badge": SafetyScoreEngine.badge(score)
+    }
+
+@router.post("/drivers/me", response_model=Driver)
+def create_driver_me(
+    payload: DriverSelfCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    if current_user.role != Role.DRIVER:
+        raise HTTPException(status_code=400, detail="Only users with Driver role can create driver profiles.")
+        
+    existing = session.exec(select(Driver).where(Driver.linked_user_id == current_user.id)).first()
+    if existing:
+        existing.name = payload.name
+        existing.license_no = payload.license_no
+        existing.license_expiry = payload.license_expiry
+        session.add(existing)
+        session.commit()
+        session.refresh(existing)
+        return existing
+        
+    new_d = Driver(
+        id=str(uuid.uuid4())[:8],
+        name=payload.name,
+        license_no=payload.license_no,
+        license_expiry=payload.license_expiry,
+        violations=0,
+        trips_completed=0,
+        hours_driven_7d=0.0,
+        linked_user_id=current_user.id
+    )
+    session.add(new_d)
+    session.commit()
+    session.refresh(new_d)
+    return new_d
+
+@router.post("/expenses/upload")
+def upload_expense_receipt(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+    os.makedirs(uploads_dir, exist_ok=True)
+    
+    file_ext = os.path.splitext(file.filename)[1]
+    filename = f"{uuid.uuid4()}{file_ext}"
+    filepath = os.path.join(uploads_dir, filename)
+    
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {"receipt_url": f"/uploads/{filename}"}
 
 @router.get("/drivers")
 def get_drivers(
@@ -453,9 +532,20 @@ def auto_assign_trip(
 def complete_trip(
     id: str,
     payload: CompletePayload,
-    current_user: User = Depends(PermissionChecker("dispatch", requires_write=True)),
+    current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
+    trip = session.get(Trip, id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+        
+    driver = session.exec(select(Driver).where(Driver.linked_user_id == current_user.id)).first()
+    is_assigned_driver = driver and trip.driver_id == driver.id
+    is_dispatch_staff = current_user.role in [Role.ADMIN, Role.FLEET_MANAGER, Role.DISPATCHER]
+    
+    if not (is_assigned_driver or is_dispatch_staff):
+        raise HTTPException(status_code=403, detail="Not authorized to complete this trip")
+        
     try:
         return DispatchEngine.complete_trip(session, id, payload.distance_km)
     except ValueError as e:
@@ -464,13 +554,57 @@ def complete_trip(
 @router.post("/trips/{id}/start", response_model=Trip)
 def start_trip(
     id: str,
-    current_user: User = Depends(PermissionChecker("dispatch", requires_write=True)),
+    current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
+    trip = session.get(Trip, id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+        
+    driver = session.exec(select(Driver).where(Driver.linked_user_id == current_user.id)).first()
+    is_assigned_driver = driver and trip.driver_id == driver.id
+    is_dispatch_staff = current_user.role in [Role.ADMIN, Role.FLEET_MANAGER, Role.DISPATCHER]
+    
+    if not (is_assigned_driver or is_dispatch_staff):
+        raise HTTPException(status_code=403, detail="Not authorized to start this trip")
+        
     try:
         return DispatchEngine.start_trip(session, id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/trips/{id}/refuse", response_model=Trip)
+def refuse_trip(
+    id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    trip = session.get(Trip, id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+        
+    driver = session.exec(select(Driver).where(Driver.linked_user_id == current_user.id)).first()
+    is_assigned_driver = driver and trip.driver_id == driver.id
+    is_dispatch_staff = current_user.role in [Role.ADMIN, Role.FLEET_MANAGER, Role.DISPATCHER]
+    
+    if not (is_assigned_driver or is_dispatch_staff):
+        raise HTTPException(status_code=403, detail="Not authorized to refuse this trip")
+        
+    if trip.status != TripStatus.ASSIGNED:
+        raise HTTPException(status_code=400, detail="Can only refuse trips in Assigned status.")
+        
+    if trip.vehicle_id:
+        vehicle = session.get(Vehicle, trip.vehicle_id)
+        if vehicle and vehicle.status == VehicleStatus.ON_TRIP:
+            vehicle.status = VehicleStatus.IDLE
+            session.add(vehicle)
+            
+    trip.driver_id = None
+    trip.vehicle_id = None
+    session.add(trip)
+    session.commit()
+    session.refresh(trip)
+    return trip
 
 @router.post("/trips/{id}/delay", response_model=Trip)
 def delay_trip(
@@ -524,7 +658,8 @@ def log_service(
         date=payload.date,
         description=payload.description,
         cost=payload.cost,
-        odometer_km=payload.odometer_km
+        odometer_km=payload.odometer_km,
+        receipt_url=payload.receipt_url
     )
     session.add(entry)
     
@@ -570,7 +705,8 @@ def log_fuel(
         date=payload.date,
         odometer_km=payload.odometer_km,
         liters=payload.liters,
-        cost=payload.cost
+        cost=payload.cost,
+        receipt_url=payload.receipt_url
     )
     session.add(entry)
     
@@ -633,6 +769,82 @@ def get_dashboard_analytics(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
+    if current_user.role == Role.DRIVER:
+        driver = session.exec(select(Driver).where(Driver.linked_user_id == current_user.id)).first()
+        if not driver:
+            return {
+                "role": "Driver",
+                "has_profile": False,
+                "message": "Please create your driver profile."
+            }
+        
+        # Get active trip (Assigned, In Transit, Delayed)
+        active_trip = session.exec(select(Trip).where(
+            Trip.driver_id == driver.id,
+            Trip.status.in_([TripStatus.ASSIGNED, TripStatus.IN_TRANSIT, TripStatus.DELAYED])
+        )).first()
+        
+        # Get vehicle
+        vehicle = None
+        if active_trip and active_trip.vehicle_id:
+            vehicle = session.get(Vehicle, active_trip.vehicle_id)
+        else:
+            last_trip = session.exec(select(Trip).where(
+                Trip.driver_id == driver.id,
+                Trip.status == TripStatus.COMPLETED
+            ).order_by(Trip.scheduled_start.desc())).first()
+            if last_trip and last_trip.vehicle_id:
+                vehicle = session.get(Vehicle, last_trip.vehicle_id)
+                
+        vehicle_stats = None
+        compliance_alerts = []
+        fuel_anomalies = []
+        if vehicle:
+            risk_score = MaintenanceEngine.risk_score(vehicle)
+            urgency = MaintenanceEngine.urgency_tag(vehicle)
+            days_left = (vehicle.insurance_expiry - date.today()).days
+            vehicle_stats = {
+                "id": vehicle.id,
+                "plate_no": vehicle.plate_no,
+                "v_type": vehicle.v_type,
+                "odometer_km": vehicle.odometer_km,
+                "last_service_km": vehicle.last_service_km,
+                "last_service_date": vehicle.last_service_date,
+                "insurance_expiry": vehicle.insurance_expiry,
+                "days_left": days_left,
+                "status": vehicle.status,
+                "engine_hours": vehicle.engine_hours,
+                "risk_score": risk_score,
+                "urgency": urgency
+            }
+            compliance_alerts = ComplianceEngine.insurance_alerts([vehicle])
+            
+            all_fuel_logs = session.exec(select(FuelLogEntry)).all()
+            fuel_anomalies = [a for a in FuelAnomalyEngine.detect_anomalies(all_fuel_logs) if a["vehicle_id"] == vehicle.id]
+            
+        score = SafetyScoreEngine.score(driver)
+        badge = SafetyScoreEngine.badge(score)
+        
+        return {
+            "role": "Driver",
+            "has_profile": True,
+            "driver": {
+                "id": driver.id,
+                "name": driver.name,
+                "license_no": driver.license_no,
+                "license_expiry": driver.license_expiry,
+                "violations": driver.violations,
+                "trips_completed": driver.trips_completed,
+                "hours_driven_7d": driver.hours_driven_7d,
+                "safety_score": score,
+                "safety_badge": badge
+            },
+            "active_trip": active_trip,
+            "vehicle": vehicle_stats,
+            "compliance_alerts": compliance_alerts,
+            "fuel_anomalies": fuel_anomalies
+        }
+
     vehicles = session.exec(select(Vehicle)).all()
     drivers = session.exec(select(Driver)).all()
     trips = session.exec(select(Trip)).all()
@@ -669,6 +881,68 @@ def get_reports_analytics(
     current_user: User = Depends(PermissionChecker("reports", requires_write=False)),
     session: Session = Depends(get_session)
 ):
+    if current_user.role == Role.DRIVER:
+        driver = session.exec(select(Driver).where(Driver.linked_user_id == current_user.id)).first()
+        if not driver:
+            return {
+                "role": "Driver",
+                "has_profile": False,
+                "message": "Please create driver profile."
+            }
+            
+        driver_trips = session.exec(select(Trip).where(Trip.driver_id == driver.id)).all()
+        total_trips = len(driver_trips)
+        completed_trips_count = sum(1 for t in driver_trips if t.status == TripStatus.COMPLETED)
+        cancelled_trips_count = sum(1 for t in driver_trips if t.status == TripStatus.CANCELLED)
+        
+        on_time_pct = round((completed_trips_count / (total_trips - cancelled_trips_count)) * 100.0, 1) if (total_trips - cancelled_trips_count) > 0 else 0.0
+        
+        v_ids = list({t.vehicle_id for t in driver_trips if t.vehicle_id})
+        total_distance = sum(t.distance_km for t in driver_trips if t.distance_km)
+        
+        total_cost = 0.0
+        total_liters = 0.0
+        efficiencies = []
+        
+        if v_ids:
+            fuel_logs = session.exec(select(FuelLogEntry).where(FuelLogEntry.vehicle_id.in_(v_ids))).all()
+            service_logs = session.exec(select(ServiceLogEntry).where(ServiceLogEntry.vehicle_id.in_(v_ids))).all()
+            
+            total_fuel_cost = sum(f.cost for f in fuel_logs)
+            total_service_cost = sum(s.cost for s in service_logs)
+            total_cost = total_fuel_cost + total_service_cost
+            total_liters = sum(f.liters for f in fuel_logs)
+            
+            by_vehicle = {}
+            for f in fuel_logs:
+                by_vehicle.setdefault(f.vehicle_id, []).append(f)
+            for vid, entries in by_vehicle.items():
+                if len(entries) < 2:
+                    continue
+                sorted_entries = sorted(entries, key=lambda e: e.odometer_km)
+                km = sorted_entries[-1].odometer_km - sorted_entries[0].odometer_km
+                liters = sum(e.liters for e in sorted_entries[1:])
+                if liters > 0:
+                    efficiencies.append(km / liters)
+                    
+        avg_efficiency = round(mean(efficiencies), 2) if efficiencies else 0.0
+        co2_kg = SustainabilityEngine.co2_estimate_kg(total_liters)
+        safety_score = SafetyScoreEngine.score(driver)
+        
+        return {
+            "role": "Driver",
+            "has_profile": True,
+            "avg_fuel_efficiency": avg_efficiency,
+            "total_operating_cost": total_cost,
+            "on_time_trip_pct": on_time_pct,
+            "co2_estimate_kg": co2_kg,
+            "total_liters": total_liters,
+            "total_trips": total_trips,
+            "safety_score": safety_score,
+            "total_distance_km": total_distance,
+            "top_cost_vehicles": []
+        }
+
     vehicles = session.exec(select(Vehicle)).all()
     trips = session.exec(select(Trip)).all()
     fuel_logs = session.exec(select(FuelLogEntry)).all()
@@ -743,4 +1017,79 @@ def get_reports_analytics(
         "total_liters": total_liters,
         "top_cost_vehicles": top_cost_vehicles,
         "total_trips": total_trips
+    }
+
+# ---------------------------------------------------------------------------
+# Weather Forecast Routes
+# ---------------------------------------------------------------------------
+
+import hashlib
+
+def generate_mock_weather(city: str, date_val: str):
+    seed_str = f"{city.strip().lower()}-{date_val}"
+    h = int(hashlib.md5(seed_str.encode('utf-8')).hexdigest(), 16)
+    
+    conditions = [
+        ("Sunny", 30, "Low", "Clear skies, optimal driving visibility."),
+        ("Partly Cloudy", 27, "Low", "Good driving conditions, mild cloud cover."),
+        ("Overcast", 23, "Low", "Dry roads, overcast skies."),
+        ("Windy", 22, "Medium", "High wind gusts. Keep firm grip on steering wheel."),
+        ("Foggy", 16, "Medium", "Reduced visibility. Engage fog lamps and reduce speed."),
+        ("Light Rain", 20, "Medium", "Wet surfaces. Reduce speed around sharp bends."),
+        ("Heavy Rain", 18, "High", "Hydroplaning hazard. Increase braking distance by 2x."),
+        ("Thunderstorm", 17, "High", "Severe storm alert. Avoid parking under trees or power lines.")
+    ]
+    
+    idx = h % len(conditions)
+    cond, temp, hazard, advisory = conditions[idx]
+    
+    temp_adjust = (h % 9) - 4
+    final_temp = temp + temp_adjust
+    
+    return {
+        "city": city,
+        "date": date_val,
+        "condition": cond,
+        "temperature": final_temp,
+        "hazard_level": hazard,
+        "advisory": advisory
+    }
+
+@router.get("/weather")
+def get_route_weather(
+    origin: str,
+    destination: str,
+    scheduled_date: str,
+    current_user: User = Depends(get_current_user)
+):
+    if not origin or not destination:
+        raise HTTPException(status_code=400, detail="Origin and destination are required.")
+    
+    # Extract only date part if datetime string is passed
+    date_val = scheduled_date.split('T')[0] if 'T' in scheduled_date else scheduled_date
+    
+    origin_weather = generate_mock_weather(origin, date_val)
+    dest_weather = generate_mock_weather(destination, date_val)
+    
+    hazard_map = {"Low": 1, "Medium": 2, "High": 3}
+    max_hazard_val = max(hazard_map[origin_weather["hazard_level"]], hazard_map[dest_weather["hazard_level"]])
+    route_hazard = "Low"
+    if max_hazard_val == 2:
+        route_hazard = "Medium"
+    elif max_hazard_val == 3:
+        route_hazard = "High"
+        
+    recommendations = []
+    if route_hazard == "High":
+        recommendations.append("Dispatch warning: Severe weather en route. Postpone trip if driving visibility is critically low.")
+    elif route_hazard == "Medium":
+        recommendations.append("Weather alert: Moderate caution advised. Wet or foggy roads expected.")
+    else:
+        recommendations.append("Clear route ahead. Proceed with standard dispatch schedule.")
+        
+    return {
+        "origin": origin_weather,
+        "destination": dest_weather,
+        "route_hazard_level": route_hazard,
+        "recommendations": recommendations
     }

@@ -116,6 +116,7 @@ class ServiceLogEntry(SQLModel, table=True):
     description: str
     cost: float
     odometer_km: float
+    receipt_url: Optional[str] = Field(default=None, nullable=True)
 
     # Relationships
     vehicle: Vehicle = Relationship(back_populates="service_logs")
@@ -127,6 +128,7 @@ class FuelLogEntry(SQLModel, table=True):
     odometer_km: float
     liters: float
     cost: float
+    receipt_url: Optional[str] = Field(default=None, nullable=True)
 
     # Relationships
     vehicle: Vehicle = Relationship(back_populates="fuel_logs")

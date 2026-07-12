@@ -6,6 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from backend.database import create_db_and_tables
 from backend.seed import seed_database
@@ -16,6 +17,11 @@ app = FastAPI(
     description="Backend API for the FleetPulse Operations Management Platform",
     version="1.0.0"
 )
+
+# Ensure uploads directory exists and mount static files handler
+uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 # Enable CORS for frontend requests
 app.add_middleware(

@@ -38,7 +38,7 @@ WRITE_PERMISSIONS = {
 
 # Module read permissions restriction (Special override for reports and settings)
 READ_RESTRICTIONS = {
-    "reports": {Role.ADMIN, Role.FLEET_MANAGER, Role.FINANCE_ANALYST, Role.SAFETY_OFFICER},
+    "reports": {Role.ADMIN, Role.FLEET_MANAGER, Role.FINANCE_ANALYST, Role.SAFETY_OFFICER, Role.DRIVER},
     "settings": {Role.ADMIN},
 }
 
@@ -105,6 +105,14 @@ class PermissionChecker:
         
         # Check read restrictions first
         if not self.requires_write:
+            if self.module in READ_RESTRICTIONS:
+                if role not in READ_RESTRICTIONS[self.module]:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Role '{role.value}' does not have read permission for module '{self.module}'."
+                    )
+                return current_user
+
             permission_level = get_permission_level(session, self.module, role)
             if permission_level not in {PermissionLevel.READ, PermissionLevel.WRITE}:
                 raise HTTPException(

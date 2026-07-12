@@ -14,7 +14,7 @@ const Notifications = React.lazy(() => import('./pages/Notifications').then(m =>
 
 import { 
   Gauge, Car, Users, Route as DispatchIcon, Wrench, Fuel, PieChart,
-  Settings as SettingsIcon, LogOut, Bell, Search, UserCheck, Menu, X
+  Settings as SettingsIcon, LogOut, Bell, Search, UserCheck, Menu, X, Sparkles
 } from 'lucide-react';
 import { useToast } from './hooks/useToast';
 
@@ -27,6 +27,15 @@ const SIDEBAR_ITEMS = [
   { name: 'Fuel & Expenses', path: '/fuel', icon: Fuel },
   { name: 'Analytics', path: '/reports', icon: PieChart },
   { name: 'Settings & RBAC', path: '/settings', icon: SettingsIcon },
+];
+
+const ROLES = [
+  { role: 'Admin', email: 'admin@fleetpulse.com' },
+  { role: 'Fleet Manager', email: 'manager@fleetpulse.com' },
+  { role: 'Dispatcher', email: 'dispatcher@fleetpulse.com' },
+  { role: 'Safety Officer', email: 'safety@fleetpulse.com' },
+  { role: 'Finance Analyst', email: 'finance@fleetpulse.com' },
+  { role: 'Driver', email: 'driver@fleetpulse.com' },
 ];
 
 const PageLoader = () => (
@@ -42,6 +51,7 @@ export const AppContent: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [swappingPersona, setSwappingPersona] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationTag, setNotificationTag] = useState<'Red' | 'Yellow'>('Red');
   const [notificationDescription, setNotificationDescription] = useState('');
@@ -64,6 +74,23 @@ export const AppContent: React.FC = () => {
     localStorage.removeItem('fleetpulse_user');
     setUser(null);
     navigate('/login');
+  };
+
+  const handlePersonaChange = async (roleName: string) => {
+    const target = ROLES.find(r => r.role === roleName);
+    if (!target) return;
+    setSwappingPersona(true);
+    try {
+      const data = await api.post<any>('/auth/login', { email: target.email, password: 'password123' });
+      localStorage.setItem('fleetpulse_token', data.access_token);
+      localStorage.setItem('fleetpulse_user', JSON.stringify(data.user));
+      setUser(data.user);
+      navigate(location.pathname, { replace: true });
+    } catch (err) {
+      console.error('Persona override failure:', err);
+    } finally {
+      setSwappingPersona(false);
+    }
   };
 
   const handleNotificationSubmit = async (e: React.FormEvent) => {
@@ -191,6 +218,20 @@ export const AppContent: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 lg:gap-4">
+            <div className="flex items-center gap-2 bg-neutral-900/60 border border-neutral-800 px-2 lg:px-3 py-1.5 rounded-lg">
+              <Sparkles className="w-3.5 h-3.5 text-brand-400 animate-pulse hidden sm:block" />
+              <select
+                value={user.role}
+                onChange={(e) => handlePersonaChange(e.target.value)}
+                disabled={swappingPersona}
+                className="bg-transparent text-[11px] font-bold text-white focus:outline-none cursor-pointer max-w-[120px] lg:max-w-none"
+              >
+                {ROLES.map((r) => (
+                  <option key={r.role} value={r.role} className="bg-neutral-900 text-white">{r.role}</option>
+                ))}
+              </select>
+            </div>
+
             {user.role === 'Driver' && (
               <button
                 type="button"
