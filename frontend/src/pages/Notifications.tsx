@@ -6,13 +6,16 @@ interface NotificationItem {
   id: string;
   driver_id: string;
   driver_name: string;
-  tag: '🔴' | '🟡';
+  tag: 'Red' | 'Yellow';
   description: string;
   location: string;
   created_at: string;
 }
 
-
+const tagStyles: Record<NotificationItem['tag'], string> = {
+  Red: 'bg-red-950/70 border-red-800 text-white',
+  Yellow: 'bg-amber-950/60 border-amber-700 text-white',
+};
 
 export const Notifications: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -81,7 +84,7 @@ export const Notifications: React.FC = () => {
                   </div>
                 </div>
                 <span className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${tagStyles[notification.tag]}`}>
-                  {notification.tag} 
+                  {notification.tag==='Red' ? '🔴' : '🟡'}
                 </span>
               </div>
 
