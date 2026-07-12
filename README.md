@@ -262,6 +262,9 @@ This project is open source. Feel free to use, modify, and distribute.
 ## Author
 
 **[JEETB03](https://github.com/JEETB03)**
+**[santu8597](https://github.com/santu8597)**
+**[Diyadey08](https://github.com/Diyadey08)**
+
 
 ## Tech Stack
 
