@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from backend.database import create_db_and_tables
+from backend.database import create_db_and_tables, ensure_compatible_schema
 from backend.seed import seed_database
 from backend.routes import router
 
@@ -36,6 +36,7 @@ app.add_middleware(
 def on_startup():
     # Make sure tables are created
     create_db_and_tables()
+    ensure_compatible_schema()
     # Check if database needs seeding
     seed_database()
 
